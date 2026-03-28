@@ -18,8 +18,10 @@ type Rule struct {
 }
 
 type Action struct {
-	Type string   `yaml:"type"`
-	Keys []string `yaml:"keys"`
+	Type   string   `yaml:"type"`
+	Keys   []string `yaml:"keys"`    // for remove_keys
+	Key    string   `yaml:"key"`     // for rename_key
+	NewKey string   `yaml:"new_key"` // for rename_key
 }
 
 func ReadConfigs(dir string) ([]*Config, error) {

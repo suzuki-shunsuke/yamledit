@@ -94,6 +94,54 @@ func TestRun(t *testing.T) { //nolint:funlen
 			want:  "name: alice # keep this\n",
 		},
 		{
+			name: "rename key at root",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: rename_key
+        key: name
+        new_key: first_name
+`,
+			input: "name: alice\nage: 30\n",
+			want:  "first_name: alice\nage: 30\n",
+		},
+		{
+			name: "rename key preserves comment",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: rename_key
+        key: name
+        new_key: first_name
+`,
+			input: "name: alice # important\nage: 30\n",
+			want:  "first_name: alice # important\nage: 30\n",
+		},
+		{
+			name: "rename key not found",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: rename_key
+        key: missing
+        new_key: new_key
+`,
+			input: "name: alice\n",
+			want:  "name: alice\n",
+		},
+		{
+			name: "rename key nested path",
+			migration: `rules:
+  - path: "$.foo"
+    actions:
+      - type: rename_key
+        key: bar
+        new_key: baz
+`,
+			input: "foo:\n  bar: 1\n  qux: 2\n",
+			want:  "foo:\n  baz: 1\n  qux: 2\n",
+		},
+		{
 			name: "unsupported action type",
 			migration: `rules:
   - path: "$"

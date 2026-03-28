@@ -104,6 +104,35 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen
 			},
 		},
 		{
+			name: "valid rename_key migration",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				setupMigration(t, dir, "rename", `rules:
+  - path: "$"
+    actions:
+      - type: rename_key
+        key: name
+        new_key: first_name
+`)
+			},
+			want: []*Config{
+				{
+					Rules: []*Rule{
+						{
+							Path: "$",
+							Actions: []*Action{
+								{
+									Type:   "rename_key",
+									Key:    "name",
+									NewKey: "first_name",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:  "no yamledit dir",
 			setup: func(_ *testing.T, _ string) {},
 			want:  []*Config{},
