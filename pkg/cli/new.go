@@ -24,13 +24,17 @@ func NewInit(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
 	}
 	return &cli.Command{
 		Name:  "new",
-		Usage: "Create a migration file",
+		Usage: "Create a migration file using a default template if it doesn't exist",
+		Description: `Create a migration file using a default template if it doesn't exist.
+If the migration file already exists, this command does nothing.
+The migration name must match the regular expression '^[a-z0-9_-]+$'.
+The migration file is created at '.yamledit/<migration name>.yaml'.`,
 		Action: func(ctx context.Context, _ *cli.Command) error {
 			return runAction(ctx, logger, args)
 		},
 		Arguments: []cli.Argument{
 			&cli.StringArg{
-				Name:        "migration name",
+				Name:        "<migration name>",
 				Destination: &args.Name,
 			},
 		},
