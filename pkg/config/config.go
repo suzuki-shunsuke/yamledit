@@ -30,6 +30,7 @@ type Action struct {
 	InsertAt          []*InsertLocation `json:"insert_at,omitempty" yaml:"insert_at" jsonschema_description:"Where to insert a new key. The first matching condition is used. If none match, the key is appended at the end (for set_key)"`
 	Values            []any             `json:"values,omitempty" yaml:"values" jsonschema_description:"Values to add to the list (for add_values)"`
 	Index             *int              `json:"index,omitempty" yaml:"index" jsonschema_description:"Index to insert values at. 0 for beginning, negative values count from end. Default -1 (for add_values)"`
+	Expr              string            `json:"expr,omitempty" yaml:"expr" jsonschema_description:"Expression for sorting keys. Variables a and b represent key-value pairs with fields: key, value, comment, index (for sort_key)"`
 }
 
 type InsertLocation struct {

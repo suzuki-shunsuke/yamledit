@@ -207,6 +207,33 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen
 			},
 		},
 		{
+			name: "valid sort_key migration",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				setupMigration(t, dir, "sortkey", `rules:
+  - path: "$"
+    actions:
+      - type: sort_key
+        expr: "a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)"
+`)
+			},
+			want: []*Config{
+				{
+					Rules: []*Rule{
+						{
+							Path: "$",
+							Actions: []*Action{
+								{
+									Type: "sort_key",
+									Expr: `a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:  "no yamledit dir",
 			setup: func(_ *testing.T, _ string) {},
 			want:  []*Config{},

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/expr-lang/expr"
 	"github.com/goccy/go-yaml/parser"
 	"github.com/suzuki-shunsuke/go-yamledit/yamledit"
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
@@ -16,7 +17,7 @@ func Run(_ context.Context, logger *slogutil.Logger, dir string, yamlFiles []str
 	if err != nil {
 		return fmt.Errorf("read migration configs: %w", err)
 	}
-	actions, err := buildActions(configs)
+	actions, err := buildActions(logger, configs)
 	if err != nil {
 		return fmt.Errorf("build actions: %w", err)
 	}
@@ -28,12 +29,12 @@ func Run(_ context.Context, logger *slogutil.Logger, dir string, yamlFiles []str
 	return nil
 }
 
-func buildActions(configs []*config.Config) ([]yamledit.Action, error) {
+func buildActions(logger *slogutil.Logger, configs []*config.Config) ([]yamledit.Action, error) {
 	var actions []yamledit.Action
 	for _, cfg := range configs {
 		for _, rule := range cfg.Rules {
 			for _, a := range rule.Actions {
-				act, err := buildAction(rule.Path, a)
+				act, err := buildAction(logger, rule.Path, a)
 				if err != nil {
 					return nil, err
 				}
@@ -44,7 +45,7 @@ func buildActions(configs []*config.Config) ([]yamledit.Action, error) {
 	return actions, nil
 }
 
-func buildAction(path string, a *config.Action) (yamledit.Action, error) {
+func buildAction(logger *slogutil.Logger, path string, a *config.Action) (yamledit.Action, error) {
 	switch a.Type {
 	case "remove_keys":
 		keys := make([]any, len(a.Keys))
@@ -58,6 +59,8 @@ func buildAction(path string, a *config.Action) (yamledit.Action, error) {
 		return buildSetKeyAction(path, a), nil
 	case "add_values":
 		return buildAddValuesAction(path, a), nil
+	case "sort_key":
+		return buildSortKeyAction(logger, path, a)
 	default:
 		return nil, fmt.Errorf("unsupported action type: %s", a.Type)
 	}
@@ -88,6 +91,33 @@ func buildSetKeyAction(path string, a *config.Action) yamledit.Action {
 		opt.InsertLocations = append(opt.InsertLocations, yloc)
 	}
 	return yamledit.MapAction(path, yamledit.SetKey(a.Key, a.Value, opt))
+}
+
+func buildSortKeyAction(logger *slogutil.Logger, path string, a *config.Action) (yamledit.Action, error) {
+	program, err := expr.Compile(a.Expr, expr.Env(map[string]any{
+		"a": map[string]any{},
+		"b": map[string]any{},
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("compile sort_key expr: %w", err)
+	}
+	return yamledit.MapAction(path, yamledit.SortKey(func(a, b *yamledit.KeyValue[any]) int {
+		env := map[string]any{
+			"a": map[string]any{"key": a.Key, "value": a.Value, "comment": a.Comment, "index": a.Index},
+			"b": map[string]any{"key": b.Key, "value": b.Value, "comment": b.Comment, "index": b.Index},
+		}
+		result, err := expr.Run(program, env)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 0
+		}
+		i, ok := result.(int)
+		if !ok {
+			logger.Error("sort_key expr must return int", "got_type", fmt.Sprintf("%T", result))
+			return 0
+		}
+		return i
+	})), nil
 }
 
 func buildAddValuesAction(path string, a *config.Action) yamledit.Action {
