@@ -142,6 +142,58 @@ func TestRun(t *testing.T) { //nolint:funlen
 			want:  "foo:\n  baz: 1\n  qux: 2\n",
 		},
 		{
+			name: "rename key ignore_existing_key",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: rename_key
+        key: name
+        new_key: first_name
+        when_duplicate: ignore_existing_key
+`,
+			input: "name: foo\nfirst_name: bar\n",
+			want:  "first_name: foo\n",
+		},
+		{
+			name: "rename key remove_old_key",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: rename_key
+        key: name
+        new_key: first_name
+        when_duplicate: remove_old_key
+`,
+			input: "name: foo\nfirst_name: bar\n",
+			want:  "first_name: bar\n",
+		},
+		{
+			name: "rename key fail on duplicate",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: rename_key
+        key: name
+        new_key: first_name
+        when_duplicate: fail
+`,
+			input:   "name: foo\nfirst_name: bar\n",
+			wantErr: true,
+		},
+		{
+			name: "rename key skip on duplicate",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: rename_key
+        key: name
+        new_key: first_name
+        when_duplicate: skip
+`,
+			input: "name: foo\nfirst_name: bar\n",
+			want:  "name: foo\nfirst_name: bar\n",
+		},
+		{
 			name: "set_key existing key",
 			migration: `rules:
   - path: "$"
