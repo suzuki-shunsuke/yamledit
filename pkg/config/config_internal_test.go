@@ -19,7 +19,7 @@ func setupMigration(t *testing.T, dir, name, content string) {
 	}
 }
 
-func TestReadConfigs(t *testing.T) { //nolint:funlen
+func TestReadConfigs(t *testing.T) { //nolint:funlen,maintidx
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -253,6 +253,33 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen
 								{
 									Type: "remove_values",
 									Expr: `value.value == "foo"`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "valid sort_list migration",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				setupMigration(t, dir, "sortlist", `rules:
+  - path: "$"
+    actions:
+      - type: sort_list
+        expr: "a.value < b.value ? -1 : (a.value > b.value ? 1 : 0)"
+`)
+			},
+			want: []*Config{
+				{
+					Rules: []*Rule{
+						{
+							Path: "$",
+							Actions: []*Action{
+								{
+									Type: "sort_list",
+									Expr: `a.value < b.value ? -1 : (a.value > b.value ? 1 : 0)`,
 								},
 							},
 						},
