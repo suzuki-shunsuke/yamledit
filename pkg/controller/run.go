@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/expr-lang/expr"
 	"github.com/goccy/go-yaml/parser"
 	"github.com/suzuki-shunsuke/go-yamledit/yamledit"
@@ -12,27 +14,42 @@ import (
 	"github.com/suzuki-shunsuke/yamledit/pkg/config"
 )
 
+type ruleActions struct {
+	files   []string
+	actions []yamledit.Action
+}
+
 func Run(_ context.Context, logger *slogutil.Logger, dir string, yamlFiles []string) error {
 	configs, err := config.ReadConfigs(dir)
 	if err != nil {
 		return fmt.Errorf("read migration configs: %w", err)
 	}
-	actions, err := buildActions(logger, configs)
+	rules, err := buildRuleActions(logger, configs)
 	if err != nil {
 		return fmt.Errorf("build actions: %w", err)
 	}
 	for _, f := range yamlFiles {
-		if err := editFile(logger, f, actions); err != nil {
-			return fmt.Errorf("edit file %s: %w", f, err)
+		for _, rule := range rules {
+			matched, err := matchFile(f, rule.files)
+			if err != nil {
+				return fmt.Errorf("match file %s: %w", f, err)
+			}
+			if !matched {
+				continue
+			}
+			if err := editFile(logger, f, rule.actions); err != nil {
+				return fmt.Errorf("edit file %s: %w", f, err)
+			}
 		}
 	}
 	return nil
 }
 
-func buildActions(logger *slogutil.Logger, configs []*config.Config) ([]yamledit.Action, error) {
-	var actions []yamledit.Action
+func buildRuleActions(logger *slogutil.Logger, configs []*config.Config) ([]*ruleActions, error) {
+	var rules []*ruleActions
 	for _, cfg := range configs {
 		for _, rule := range cfg.Rules {
+			var actions []yamledit.Action
 			for _, a := range rule.Actions {
 				act, err := buildAction(logger, rule.Path, a)
 				if err != nil {
@@ -40,9 +57,35 @@ func buildActions(logger *slogutil.Logger, configs []*config.Config) ([]yamledit
 				}
 				actions = append(actions, act)
 			}
+			rules = append(rules, &ruleActions{
+				files:   rule.Files,
+				actions: actions,
+			})
 		}
 	}
-	return actions, nil
+	return rules, nil
+}
+
+func matchFile(file string, patterns []string) (bool, error) {
+	if len(patterns) == 0 {
+		return true, nil
+	}
+	matched := false
+	for _, p := range patterns {
+		exclude := strings.HasPrefix(p, "!")
+		pattern := p
+		if exclude {
+			pattern = p[1:]
+		}
+		ok, err := doublestar.Match(pattern, file)
+		if err != nil {
+			return false, fmt.Errorf("match pattern %s: %w", p, err)
+		}
+		if ok {
+			matched = !exclude
+		}
+	}
+	return matched, nil
 }
 
 func buildAction(logger *slogutil.Logger, path string, a *config.Action) (yamledit.Action, error) {
