@@ -123,6 +123,10 @@
           },
           "type": "array",
           "description": "File path patterns to apply this rule to. Glob patterns with ** supported. Paths starting with ! are excluded."
+        },
+        "import": {
+          "type": "string",
+          "description": "URL to import rules from a remote migration file."
         }
       },
       "additionalProperties": false,
