@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/goccy/go-yaml"
@@ -147,6 +148,26 @@ func ReadConfigs(ctx context.Context, ghClient *gh.Client, dir string) ([]*Confi
 	}
 	return configs, nil
 }
+
+func ReadConfigsByPaths(ctx context.Context, ghClient *gh.Client, dir string, paths []string) ([]*Config, error) {
+	configs := make([]*Config, 0, len(paths))
+	for _, p := range paths {
+		if !filepath.IsAbs(p) && !yamlSuffixPattern.MatchString(p) {
+			p = filepath.Join(dir, ".yamledit", p+".yaml")
+		}
+		cfg, err := ReadConfig(p)
+		if err != nil {
+			return nil, fmt.Errorf("read migration file %s: %w", p, err)
+		}
+		if err := ResolveImports(ctx, ghClient, cfg); err != nil {
+			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
+		}
+		configs = append(configs, cfg)
+	}
+	return configs, nil
+}
+
+var yamlSuffixPattern = regexp.MustCompile(`\.ya?ml$`)
 
 func ReadConfig(p string) (*Config, error) {
 	b, err := os.ReadFile(p)
