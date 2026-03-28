@@ -142,6 +142,123 @@ func TestRun(t *testing.T) { //nolint:funlen
 			want:  "foo:\n  baz: 1\n  qux: 2\n",
 		},
 		{
+			name: "set_key existing key",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: name
+        value: bob
+`,
+			input: "name: alice\nage: 30\n",
+			want:  "name: bob\nage: 30\n",
+		},
+		{
+			name: "set_key add new key",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: age
+        value: 25
+`,
+			input: "name: alice\n",
+			want:  "name: alice\nage: 25\n",
+		},
+		{
+			name: "set_key skip if key not found",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: age
+        value: 25
+        skip_if_key_not_found: true
+`,
+			input: "name: alice\n",
+			want:  "name: alice\n",
+		},
+		{
+			name: "set_key skip if key found",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: name
+        value: bob
+        skip_if_key_found: true
+`,
+			input: "name: alice\n",
+			want:  "name: alice\n",
+		},
+		{
+			name: "set_key insert before key",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: gender
+        value: male
+        insert_at:
+          - before_key: age
+`,
+			input: "name: alice\nage: 30\n",
+			want:  "name: alice\ngender: male\nage: 30\n",
+		},
+		{
+			name: "set_key insert after key",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: gender
+        value: male
+        insert_at:
+          - after_key: name
+`,
+			input: "name: alice\nage: 30\n",
+			want:  "name: alice\ngender: male\nage: 30\n",
+		},
+		{
+			name: "set_key insert first",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: id
+        value: 1
+        insert_at:
+          - first: true
+`,
+			input: "name: alice\nage: 30\n",
+			want:  "id: 1\nname: alice\nage: 30\n",
+		},
+		{
+			name: "set_key clear comment",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: name
+        value: bob
+        clear_comment: true
+`,
+			input: "name: alice # important\nage: 30\n",
+			want:  "name: bob\nage: 30\n",
+		},
+		{
+			name: "set_key nested path",
+			migration: `rules:
+  - path: "$.foo"
+    actions:
+      - type: set_key
+        key: bar
+        value: 99
+`,
+			input: "foo:\n  bar: 1\n  baz: 2\n",
+			want:  "foo:\n  bar: 99\n  baz: 2\n",
+		},
+		{
 			name: "unsupported action type",
 			migration: `rules:
   - path: "$"

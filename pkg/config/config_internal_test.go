@@ -133,6 +133,49 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen
 			},
 		},
 		{
+			name: "valid set_key migration",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				setupMigration(t, dir, "setkey", `rules:
+  - path: "$"
+    actions:
+      - type: set_key
+        key: name
+        value: bob
+        skip_if_key_not_found: true
+        skip_if_key_found: false
+        clear_comment: true
+        insert_at:
+          - after_key: id
+          - before_key: age
+          - first: true
+`)
+			},
+			want: []*Config{
+				{
+					Rules: []*Rule{
+						{
+							Path: "$",
+							Actions: []*Action{
+								{
+									Type:              "set_key",
+									Key:               "name",
+									Value:             "bob",
+									SkipIfKeyNotFound: true,
+									ClearComment:      true,
+									InsertAt: []*InsertLocation{
+										{AfterKey: "id"},
+										{BeforeKey: "age"},
+										{First: true},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:  "no yamledit dir",
 			setup: func(_ *testing.T, _ string) {},
 			want:  []*Config{},

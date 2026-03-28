@@ -54,6 +54,23 @@ func buildAction(path string, a *config.Action) (yamledit.Action, error) {
 		return yamledit.MapAction(path, yamledit.RemoveKeys(keys...)), nil
 	case "rename_key":
 		return yamledit.MapAction(path, yamledit.RenameKey(a.Key, a.NewKey, yamledit.Skip)), nil
+	case "set_key":
+		opt := &yamledit.SetKeyOption{
+			IgnoreIfKeyNotExist: a.SkipIfKeyNotFound,
+			IgnoreIfKeyExist:    a.SkipIfKeyFound,
+			ClearComment:        a.ClearComment,
+		}
+		for _, loc := range a.InsertAt {
+			yloc := &yamledit.InsertLocation{First: loc.First}
+			if loc.AfterKey != "" {
+				yloc.AfterKey = loc.AfterKey
+			}
+			if loc.BeforeKey != "" {
+				yloc.BeforeKey = loc.BeforeKey
+			}
+			opt.InsertLocations = append(opt.InsertLocations, yloc)
+		}
+		return yamledit.MapAction(path, yamledit.SetKey(a.Key, a.Value, opt)), nil
 	default:
 		return nil, fmt.Errorf("unsupported action type: %s", a.Type)
 	}
