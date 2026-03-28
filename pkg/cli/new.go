@@ -45,7 +45,7 @@ func runAction(_ context.Context, logger *slogutil.Logger, args *RunArgs) error 
 		return errors.New("migration name is required")
 	}
 
-	if err := config.New(args.Name); err != nil {
+	if err := config.New(".", args.Name); err != nil {
 		return fmt.Errorf("initialize config: %w", err)
 	}
 	return nil
