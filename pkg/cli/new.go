@@ -29,7 +29,7 @@ func NewInit(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
 		},
 		Arguments: []cli.Argument{
 			&cli.StringArg{
-				Name:        "files",
+				Name:        "migration name",
 				Destination: &args.Name,
 			},
 		},
@@ -39,6 +39,9 @@ func NewInit(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
 func runAction(_ context.Context, logger *slogutil.Logger, args *RunArgs) error {
 	if err := logger.SetLevel(args.LogLevel); err != nil {
 		return fmt.Errorf("set log level: %w", err)
+	}
+	if args.Name == "" {
+		return fmt.Errorf("migration name is required")
 	}
 
 	if err := config.New(args.Name); err != nil {

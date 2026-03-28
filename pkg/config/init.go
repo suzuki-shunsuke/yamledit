@@ -19,7 +19,7 @@ const (
 func New(name string) error {
 	pattern := regexp.MustCompile(`^[a-z0-9_-]+$`)
 	if !pattern.MatchString(name) {
-		return fmt.Errorf(`invalid name: "%s". Must match pattern "%s"`, name, pattern.String())
+		return fmt.Errorf(`invalid migration name: '%s'. Must match pattern '%s'`, name, pattern.String())
 	}
 	p := filepath.Join(".yamledit", name+".yaml")
 	if _, err := os.Stat(p); err == nil {
