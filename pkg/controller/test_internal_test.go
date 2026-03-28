@@ -35,7 +35,7 @@ func TestTest_pass(t *testing.T) {
 `)
 	setupTestFiles(t, dir, "test", "basic", "name: alice\nage: 30\n", "name: alice\n")
 
-	err := Test(context.Background(), newLogger(), dir, nil)
+	err := Test(context.Background(), newLogger(), nil, dir, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestTest_fail(t *testing.T) {
 `)
 	setupTestFiles(t, dir, "test", "basic", "name: alice\nage: 30\n", "name: alice\nage: 30\n")
 
-	err := Test(context.Background(), newLogger(), dir, nil)
+	err := Test(context.Background(), newLogger(), nil, dir, nil)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -71,7 +71,7 @@ func TestTest_missingResultFile(t *testing.T) {
 `)
 	setupTestFiles(t, dir, "test", "basic", "name: alice\nage: 30\n", "")
 
-	err := Test(context.Background(), newLogger(), dir, nil)
+	err := Test(context.Background(), newLogger(), nil, dir, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestTest_noTestDirectory(t *testing.T) {
           - age
 `)
 
-	err := Test(context.Background(), newLogger(), dir, nil)
+	err := Test(context.Background(), newLogger(), nil, dir, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestTest_specificMigration(t *testing.T) {
 `)
 	setupTestFiles(t, dir, "mig1", "basic", "name: alice\nage: 30\n", "name: alice\n")
 
-	err := Test(context.Background(), newLogger(), dir, []string{"mig1"})
+	err := Test(context.Background(), newLogger(), nil, dir, []string{"mig1"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

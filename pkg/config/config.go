@@ -7,8 +7,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/goccy/go-yaml"
+	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
 
 type Config struct {
@@ -44,24 +46,62 @@ type InsertLocation struct {
 	First     bool   `json:"first,omitempty" yaml:"first" jsonschema_description:"Insert at the beginning"`
 }
 
-func ResolveImports(ctx context.Context, cfg *Config) error {
+func ResolveImports(ctx context.Context, ghClient *gh.Client, cfg *Config) error {
 	var resolved []*Rule
 	for _, rule := range cfg.Rules {
 		if rule.Import == "" {
 			resolved = append(resolved, rule)
 			continue
 		}
-		imported, err := fetchAndParse(ctx, rule.Import)
+		imported, err := resolveImport(ctx, ghClient, rule.Import)
 		if err != nil {
 			return fmt.Errorf("import %s: %w", rule.Import, err)
 		}
-		if err := ResolveImports(ctx, imported); err != nil {
+		if err := ResolveImports(ctx, ghClient, imported); err != nil {
 			return err
 		}
 		resolved = append(resolved, imported.Rules...)
 	}
 	cfg.Rules = resolved
 	return nil
+}
+
+func resolveImport(ctx context.Context, ghClient *gh.Client, s string) (*Config, error) {
+	if owner, repo, path, ref, ok := parseGitHubImport(s); ok {
+		return fetchAndParseGitHub(ctx, ghClient, owner, repo, path, ref)
+	}
+	return fetchAndParse(ctx, s)
+}
+
+func parseGitHubImport(s string) (owner, repo, path, ref string, ok bool) {
+	const prefix = "github.com/"
+	if !strings.HasPrefix(s, prefix) {
+		return "", "", "", "", false
+	}
+	rest := s[len(prefix):]
+	// Split ref: "owner/repo/path:ref"
+	if i := strings.LastIndex(rest, ":"); i >= 0 {
+		ref = rest[i+1:]
+		rest = rest[:i]
+	}
+	// Split: owner/repo/path...
+	parts := strings.SplitN(rest, "/", 3) //nolint:mnd
+	if len(parts) < 3 {                   //nolint:mnd
+		return "", "", "", "", false
+	}
+	return parts[0], parts[1], parts[2], ref, true
+}
+
+func fetchAndParseGitHub(ctx context.Context, ghClient *gh.Client, owner, repo, path, ref string) (*Config, error) {
+	content, err := ghClient.GetContent(ctx, owner, repo, path, ref)
+	if err != nil {
+		return nil, fmt.Errorf("get GitHub content: %w", err)
+	}
+	var cfg Config
+	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal YAML: %w", err)
+	}
+	return &cfg, nil
 }
 
 func fetchAndParse(ctx context.Context, url string) (*Config, error) {
@@ -88,7 +128,7 @@ func fetchAndParse(ctx context.Context, url string) (*Config, error) {
 	return &cfg, nil
 }
 
-func ReadConfigs(ctx context.Context, dir string) ([]*Config, error) {
+func ReadConfigs(ctx context.Context, ghClient *gh.Client, dir string) ([]*Config, error) {
 	pattern := filepath.Join(dir, ".yamledit", "*.yaml")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
@@ -100,7 +140,7 @@ func ReadConfigs(ctx context.Context, dir string) ([]*Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)
 		}
-		if err := ResolveImports(ctx, cfg); err != nil {
+		if err := ResolveImports(ctx, ghClient, cfg); err != nil {
 			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
 		}
 		configs = append(configs, cfg)

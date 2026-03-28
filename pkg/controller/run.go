@@ -12,6 +12,7 @@ import (
 	"github.com/suzuki-shunsuke/go-yamledit/yamledit"
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
 	"github.com/suzuki-shunsuke/yamledit/pkg/config"
+	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
 
 type ruleActions struct {
@@ -19,8 +20,8 @@ type ruleActions struct {
 	actions []yamledit.Action
 }
 
-func Run(ctx context.Context, logger *slogutil.Logger, dir string, yamlFiles []string) error {
-	configs, err := config.ReadConfigs(ctx, dir)
+func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, dir string, yamlFiles []string) error {
+	configs, err := config.ReadConfigs(ctx, ghClient, dir)
 	if err != nil {
 		return fmt.Errorf("read migration configs: %w", err)
 	}

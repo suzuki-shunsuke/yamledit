@@ -11,9 +11,10 @@ import (
 	"github.com/suzuki-shunsuke/go-yamledit/yamledit"
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
 	"github.com/suzuki-shunsuke/yamledit/pkg/config"
+	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
 
-func Test(ctx context.Context, logger *slogutil.Logger, dir string, migrations []string) error {
+func Test(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, dir string, migrations []string) error {
 	if len(migrations) == 0 {
 		var err error
 		migrations, err = discoverMigrations(dir)
@@ -23,7 +24,7 @@ func Test(ctx context.Context, logger *slogutil.Logger, dir string, migrations [
 	}
 	var failed bool
 	for _, name := range migrations {
-		f, err := testMigration(ctx, logger, dir, name)
+		f, err := testMigration(ctx, logger, ghClient, dir, name)
 		if err != nil {
 			return fmt.Errorf("test migration %s: %w", name, err)
 		}
@@ -51,13 +52,13 @@ func discoverMigrations(dir string) ([]string, error) {
 	return names, nil
 }
 
-func testMigration(ctx context.Context, logger *slogutil.Logger, dir, name string) (bool, error) { //nolint:cyclop
+func testMigration(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, dir, name string) (bool, error) { //nolint:cyclop
 	cfgPath := filepath.Join(dir, ".yamledit", name+".yaml")
 	cfg, err := config.ReadConfig(cfgPath)
 	if err != nil {
 		return false, fmt.Errorf("read config: %w", err)
 	}
-	if err := config.ResolveImports(ctx, cfg); err != nil {
+	if err := config.ResolveImports(ctx, ghClient, cfg); err != nil {
 		return false, fmt.Errorf("resolve imports: %w", err)
 	}
 	actions, err := buildAllActions(logger, cfg)
