@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -350,7 +351,7 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen,maintidx
 			t.Parallel()
 			dir := t.TempDir()
 			tt.setup(t, dir)
-			got, err := ReadConfigs(dir)
+			got, err := ReadConfigs(context.Background(), dir)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -394,7 +395,7 @@ func TestResolveImports(t *testing.T) {
 			},
 		},
 	}
-	if err := ResolveImports(cfg); err != nil {
+	if err := ResolveImports(context.Background(), cfg); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	want := []*Rule{
@@ -423,7 +424,7 @@ func TestResolveImports_noImport(t *testing.T) {
 			{Path: "$", Actions: []*Action{{Type: "remove_keys", Keys: []string{"age"}}}},
 		},
 	}
-	if err := ResolveImports(cfg); err != nil {
+	if err := ResolveImports(context.Background(), cfg); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(cfg.Rules) != 1 {

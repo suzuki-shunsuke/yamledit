@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -43,18 +44,18 @@ type InsertLocation struct {
 	First     bool   `json:"first,omitempty" yaml:"first" jsonschema_description:"Insert at the beginning"`
 }
 
-func ResolveImports(cfg *Config) error {
+func ResolveImports(ctx context.Context, cfg *Config) error {
 	var resolved []*Rule
 	for _, rule := range cfg.Rules {
 		if rule.Import == "" {
 			resolved = append(resolved, rule)
 			continue
 		}
-		imported, err := fetchAndParse(rule.Import)
+		imported, err := fetchAndParse(ctx, rule.Import)
 		if err != nil {
 			return fmt.Errorf("import %s: %w", rule.Import, err)
 		}
-		if err := ResolveImports(imported); err != nil {
+		if err := ResolveImports(ctx, imported); err != nil {
 			return err
 		}
 		resolved = append(resolved, imported.Rules...)
@@ -63,8 +64,12 @@ func ResolveImports(cfg *Config) error {
 	return nil
 }
 
-func fetchAndParse(url string) (*Config, error) {
-	resp, err := http.Get(url) //nolint:gosec,noctx
+func fetchAndParse(ctx context.Context, url string) (*Config, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetch URL: %w", err)
 	}
@@ -83,7 +88,7 @@ func fetchAndParse(url string) (*Config, error) {
 	return &cfg, nil
 }
 
-func ReadConfigs(dir string) ([]*Config, error) {
+func ReadConfigs(ctx context.Context, dir string) ([]*Config, error) {
 	pattern := filepath.Join(dir, ".yamledit", "*.yaml")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
@@ -95,7 +100,7 @@ func ReadConfigs(dir string) ([]*Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)
 		}
-		if err := ResolveImports(cfg); err != nil {
+		if err := ResolveImports(ctx, cfg); err != nil {
 			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
 		}
 		configs = append(configs, cfg)
