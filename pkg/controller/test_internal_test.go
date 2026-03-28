@@ -1,0 +1,113 @@
+package controller
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func setupTestFiles(t *testing.T, dir, migration, testName, input, result string) { //nolint:unparam
+	t.Helper()
+	testDir := filepath.Join(dir, ".yamledit", migration+"_test")
+	if err := os.MkdirAll(testDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(testDir, testName+".yaml"), []byte(input), 0o644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+	if result != "" {
+		if err := os.WriteFile(filepath.Join(testDir, testName+"_result.yaml"), []byte(result), 0o644); err != nil { //nolint:gosec
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestTest_pass(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	setupTestFiles(t, dir, "test", "basic", "name: alice\nage: 30\n", "name: alice\n")
+
+	err := Test(context.Background(), newLogger(), dir, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTest_fail(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	setupTestFiles(t, dir, "test", "basic", "name: alice\nage: 30\n", "name: alice\nage: 30\n")
+
+	err := Test(context.Background(), newLogger(), dir, nil)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestTest_missingResultFile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	setupTestFiles(t, dir, "test", "basic", "name: alice\nage: 30\n", "")
+
+	err := Test(context.Background(), newLogger(), dir, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTest_noTestDirectory(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+
+	err := Test(context.Background(), newLogger(), dir, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTest_specificMigration(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	setupMigration(t, dir, "mig1", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	setupTestFiles(t, dir, "mig1", "basic", "name: alice\nage: 30\n", "name: alice\n")
+
+	err := Test(context.Background(), newLogger(), dir, []string{"mig1"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

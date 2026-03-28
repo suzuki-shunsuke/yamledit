@@ -244,21 +244,28 @@ func parseWhenDuplicate(s string) (yamledit.WhenDuplicateKey, error) {
 	}
 }
 
+func applyActions(b []byte, actions []yamledit.Action) (string, error) {
+	file, err := parser.ParseBytes(b, parser.ParseComments)
+	if err != nil {
+		return "", fmt.Errorf("parse YAML: %w", err)
+	}
+	for _, act := range actions {
+		if err := act.Run(file.Docs[0].Body); err != nil {
+			return "", fmt.Errorf("run action: %w", err)
+		}
+	}
+	return file.String(), nil
+}
+
 func editFile(logger *slogutil.Logger, path string, actions []yamledit.Action) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read file: %w", err)
 	}
-	file, err := parser.ParseBytes(b, parser.ParseComments)
+	result, err := applyActions(b, actions)
 	if err != nil {
-		return fmt.Errorf("parse YAML: %w", err)
+		return err
 	}
-	for _, act := range actions {
-		if err := act.Run(file.Docs[0].Body); err != nil {
-			return fmt.Errorf("run action: %w", err)
-		}
-	}
-	result := file.String()
 	if result == string(b) {
 		logger.Info("no changes", "file", path)
 		return nil

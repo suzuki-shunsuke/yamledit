@@ -16,7 +16,7 @@ func newLogger() *slogutil.Logger {
 	})
 }
 
-func setupMigration(t *testing.T, dir, name, content string) { //nolint:unparam
+func setupMigration(t *testing.T, dir, name, content string) {
 	t.Helper()
 	configDir := filepath.Join(dir, ".yamledit")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
