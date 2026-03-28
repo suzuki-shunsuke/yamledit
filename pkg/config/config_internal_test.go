@@ -234,6 +234,33 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen
 			},
 		},
 		{
+			name: "valid remove_values migration",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				setupMigration(t, dir, "removevals", `rules:
+  - path: "$"
+    actions:
+      - type: remove_values
+        expr: 'value.value == "foo"'
+`)
+			},
+			want: []*Config{
+				{
+					Rules: []*Rule{
+						{
+							Path: "$",
+							Actions: []*Action{
+								{
+									Type: "remove_values",
+									Expr: `value.value == "foo"`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:  "no yamledit dir",
 			setup: func(_ *testing.T, _ string) {},
 			want:  []*Config{},

@@ -18,7 +18,7 @@ type Rule struct {
 }
 
 type Action struct {
-	Type              string            `json:"type" yaml:"type" jsonschema_description:"Action type: remove_keys, rename_key, set_key, or add_values"`
+	Type              string            `json:"type" yaml:"type" jsonschema_description:"Action type: remove_keys, rename_key, set_key, add_values, sort_key, or remove_values"`
 	Keys              []string          `json:"keys,omitempty" yaml:"keys" jsonschema_description:"Keys to remove (for remove_keys)"`
 	Key               string            `json:"key,omitempty" yaml:"key" jsonschema_description:"Target key name (for rename_key, set_key)"`
 	NewKey            string            `json:"new_key,omitempty" yaml:"new_key" jsonschema_description:"New key name (for rename_key)"`

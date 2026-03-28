@@ -381,6 +381,39 @@ func TestRun(t *testing.T) { //nolint:funlen,maintidx
 			want:  "foo:\n  a: 1\n  b: 2\n  c: 3\n",
 		},
 		{
+			name: "remove_values matching elements",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: remove_values
+        expr: 'value.value == "bar"'
+`,
+			input: "- foo\n- bar\n- baz\n",
+			want:  "- foo\n- baz\n",
+		},
+		{
+			name: "remove_values no matches",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: remove_values
+        expr: 'value.value == "missing"'
+`,
+			input: "- foo\n- bar\n",
+			want:  "- foo\n- bar\n",
+		},
+		{
+			name: "remove_values nested path",
+			migration: `rules:
+  - path: "$.items"
+    actions:
+      - type: remove_values
+        expr: 'value.value == "b"'
+`,
+			input: "items:\n  - a\n  - b\n  - c\n",
+			want:  "items:\n  - a\n  - c\n",
+		},
+		{
 			name: "unsupported action type",
 			migration: `rules:
   - path: "$"
