@@ -28,7 +28,7 @@ func New(name string) error {
 		return fmt.Errorf("stat config file: %w", err)
 	}
 	if err := os.MkdirAll(".yamledit", dirPermission); err != nil {
-		return err
+		return fmt.Errorf("create config directory .yamledit: %w", err)
 	}
 	if err := os.WriteFile(p, defaultConfig, filePermission); err != nil {
 		return fmt.Errorf("write config file: %w", err)
