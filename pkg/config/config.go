@@ -18,10 +18,21 @@ type Rule struct {
 }
 
 type Action struct {
-	Type   string   `yaml:"type"`
-	Keys   []string `yaml:"keys"`    // for remove_keys
-	Key    string   `yaml:"key"`     // for rename_key
-	NewKey string   `yaml:"new_key"` // for rename_key
+	Type              string            `yaml:"type"`
+	Keys              []string          `yaml:"keys"`                  // for remove_keys
+	Key               string            `yaml:"key"`                   // for rename_key, set_key
+	NewKey            string            `yaml:"new_key"`               // for rename_key
+	Value             any               `yaml:"value"`                 // for set_key
+	SkipIfKeyNotFound bool              `yaml:"skip_if_key_not_found"` // for set_key
+	SkipIfKeyFound    bool              `yaml:"skip_if_key_found"`     // for set_key
+	ClearComment      bool              `yaml:"clear_comment"`         // for set_key
+	InsertAt          []*InsertLocation `yaml:"insert_at"`             // for set_key
+}
+
+type InsertLocation struct {
+	AfterKey  string `yaml:"after_key"`
+	BeforeKey string `yaml:"before_key"`
+	First     bool   `yaml:"first"`
 }
 
 func ReadConfigs(dir string) ([]*Config, error) {
