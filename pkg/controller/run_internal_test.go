@@ -22,7 +22,7 @@ func setupMigration(t *testing.T, dir, name, content string) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, name+".yaml"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, name+".yaml"), []byte(content), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 }
@@ -30,7 +30,7 @@ func setupMigration(t *testing.T, dir, name, content string) {
 func setupYAMLFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	p := filepath.Join(dir, name)
-	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(p, []byte(content), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 	return p

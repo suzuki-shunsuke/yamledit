@@ -18,7 +18,7 @@ func NewRun(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
 			if err := logger.SetLevel(gFlags.LogLevel); err != nil {
 				return fmt.Errorf("set log level: %w", err)
 			}
-			return controller.Run(ctx, logger, ".", yamlFiles) //nolint:wrapcheck
+			return controller.Run(ctx, logger, ".", yamlFiles)
 		},
 		Arguments: []cli.Argument{
 			&cli.StringArgs{

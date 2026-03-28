@@ -76,7 +76,7 @@ func editFile(logger *slogutil.Logger, path string, actions []yamledit.Action) e
 		logger.Info("no changes", "file", path)
 		return nil
 	}
-	if err := os.WriteFile(path, []byte(result), 0o644); err != nil { //nolint:gosec
+	if err := os.WriteFile(path, []byte(result), 0o644); err != nil { //nolint:gosec,mnd
 		return fmt.Errorf("write file: %w", err)
 	}
 	logger.Info("updated", "file", path)

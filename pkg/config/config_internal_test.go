@@ -14,12 +14,12 @@ func setupMigration(t *testing.T, dir, name, content string) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, name+".yaml"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, name+".yaml"), []byte(content), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 }
 
-func TestReadConfigs(t *testing.T) {
+func TestReadConfigs(t *testing.T) { //nolint:funlen
 	t.Parallel()
 	tests := []struct {
 		name    string
