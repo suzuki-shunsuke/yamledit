@@ -39,3 +39,7 @@ rules:
     - `.rules[].actions[].expr`: The expression to select elements to remove
   - `sort_list`: Sort lists
     - `.rules[].actions[].expr`: The sorting logic expression
+- `.rules[].files`: Default file paths to apply the rule to
+  - Glob patterns are supported. Paths starting with `!` are excluded, similar to `.gitignore`.
+    - Use github.com/bmatcuk/doublestar/v4 to support double star `**`
+  - When file paths are passed as command-line arguments, the rule is applied only to paths that match `files`.

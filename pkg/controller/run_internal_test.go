@@ -16,7 +16,7 @@ func newLogger() *slogutil.Logger {
 	})
 }
 
-func setupMigration(t *testing.T, dir, name, content string) {
+func setupMigration(t *testing.T, dir, name, content string) { //nolint:unparam
 	t.Helper()
 	configDir := filepath.Join(dir, ".yamledit")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
@@ -517,6 +517,134 @@ func TestRun_multipleFiles(t *testing.T) {
 		if diff := cmp.Diff(tc.want, string(got)); diff != "" {
 			t.Errorf("%s content mismatch (-want +got):\n%s", tc.path, diff)
 		}
+	}
+}
+
+func TestRun_filesFilter(t *testing.T) { //nolint:funlen,cyclop
+	t.Parallel()
+	t.Run("matching pattern applies rule", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    files:
+      - "**/*.yaml"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+		yamlFile := setupYAMLFile(t, dir, "input.yaml", "name: alice\nage: 30\n")
+		if err := Run(context.Background(), newLogger(), dir, []string{yamlFile}); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got, err := os.ReadFile(yamlFile)
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+		if diff := cmp.Diff("name: alice\n", string(got)); diff != "" {
+			t.Errorf("mismatch (-want +got):\n%s", diff)
+		}
+	})
+	t.Run("non-matching pattern skips rule", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    files:
+      - "*.json"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+		yamlFile := setupYAMLFile(t, dir, "input.yaml", "name: alice\nage: 30\n")
+		if err := Run(context.Background(), newLogger(), dir, []string{yamlFile}); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got, err := os.ReadFile(yamlFile)
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+		if diff := cmp.Diff("name: alice\nage: 30\n", string(got)); diff != "" {
+			t.Errorf("mismatch (-want +got):\n%s", diff)
+		}
+	})
+	t.Run("exclude pattern", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    files:
+      - "**/*.yaml"
+      - "!**/input.yaml"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+		yamlFile := setupYAMLFile(t, dir, "input.yaml", "name: alice\nage: 30\n")
+		if err := Run(context.Background(), newLogger(), dir, []string{yamlFile}); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got, err := os.ReadFile(yamlFile)
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+		if diff := cmp.Diff("name: alice\nage: 30\n", string(got)); diff != "" {
+			t.Errorf("mismatch (-want +got):\n%s", diff)
+		}
+	})
+	t.Run("no files field applies to all", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+		yamlFile := setupYAMLFile(t, dir, "input.yaml", "name: alice\nage: 30\n")
+		if err := Run(context.Background(), newLogger(), dir, []string{yamlFile}); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		got, err := os.ReadFile(yamlFile)
+		if err != nil {
+			t.Fatalf("failed to read file: %v", err)
+		}
+		if diff := cmp.Diff("name: alice\n", string(got)); diff != "" {
+			t.Errorf("mismatch (-want +got):\n%s", diff)
+		}
+	})
+}
+
+func TestMatchFile(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		file     string
+		patterns []string
+		want     bool
+	}{
+		{name: "empty patterns", file: "foo.yaml", patterns: nil, want: true},
+		{name: "match", file: "foo.yaml", patterns: []string{"*.yaml"}, want: true},
+		{name: "no match", file: "foo.json", patterns: []string{"*.yaml"}, want: false},
+		{name: "doublestar", file: "a/b/c.yaml", patterns: []string{"**/*.yaml"}, want: true},
+		{name: "exclude", file: "vendor/a.yaml", patterns: []string{"**/*.yaml", "!vendor/**"}, want: false},
+		{name: "exclude then include", file: "vendor/a.yaml", patterns: []string{"!vendor/**", "vendor/a.yaml"}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := matchFile(tt.file, tt.patterns)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("matchFile(%q, %v) = %v, want %v", tt.file, tt.patterns, got, tt.want)
+			}
+		})
 	}
 }
 

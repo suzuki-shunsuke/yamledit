@@ -15,6 +15,7 @@ type Config struct {
 type Rule struct {
 	Path    string    `json:"path" yaml:"path" jsonschema_description:"YAML path to the target node (e.g. \"$\", \"$.foo\")"`
 	Actions []*Action `json:"actions" yaml:"actions" jsonschema_description:"List of actions to apply. Actions are evaluated in order."`
+	Files   []string  `json:"files,omitempty" yaml:"files" jsonschema_description:"File path patterns to apply this rule to. Glob patterns with ** supported. Paths starting with ! are excluded."`
 }
 
 type Action struct {

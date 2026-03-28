@@ -116,6 +116,13 @@
           },
           "type": "array",
           "description": "List of actions to apply. Actions are evaluated in order."
+        },
+        "files": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "File path patterns to apply this rule to. Glob patterns with ** supported. Paths starting with ! are excluded."
         }
       },
       "additionalProperties": false,

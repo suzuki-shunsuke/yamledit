@@ -288,6 +288,38 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen,maintidx
 			},
 		},
 		{
+			name: "rule with files",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				setupMigration(t, dir, "withfiles", `rules:
+  - path: "$"
+    files:
+      - "**/*.yaml"
+      - "!vendor/**"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+			},
+			want: []*Config{
+				{
+					Rules: []*Rule{
+						{
+							Path:  "$",
+							Files: []string{"**/*.yaml", "!vendor/**"},
+							Actions: []*Action{
+								{
+									Type: "remove_keys",
+									Keys: []string{"age"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:  "no yamledit dir",
 			setup: func(_ *testing.T, _ string) {},
 			want:  []*Config{},
