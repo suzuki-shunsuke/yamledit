@@ -1,0 +1,6 @@
+rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
