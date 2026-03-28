@@ -58,6 +58,10 @@
         "index": {
           "type": "integer",
           "description": "Index to insert values at. 0 for beginning, negative values count from end. Default -1 (for add_values)"
+        },
+        "expr": {
+          "type": "string",
+          "description": "Expression for sorting keys. Variables a and b represent key-value pairs with fields: key, value, comment, index (for sort_key)"
         }
       },
       "additionalProperties": false,

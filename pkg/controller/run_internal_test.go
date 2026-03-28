@@ -348,6 +348,39 @@ func TestRun(t *testing.T) { //nolint:funlen,maintidx
 			want:  "items:\n  - a\n  - b\n  - c\n",
 		},
 		{
+			name: "sort_key alphabetical",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: sort_key
+        expr: "a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)"
+`,
+			input: "c: 3\na: 1\nb: 2\n",
+			want:  "a: 1\nb: 2\nc: 3\n",
+		},
+		{
+			name: "sort_key already sorted",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: sort_key
+        expr: "a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)"
+`,
+			input: "a: 1\nb: 2\nc: 3\n",
+			want:  "a: 1\nb: 2\nc: 3\n",
+		},
+		{
+			name: "sort_key nested path",
+			migration: `rules:
+  - path: "$.foo"
+    actions:
+      - type: sort_key
+        expr: "a.key < b.key ? -1 : (a.key > b.key ? 1 : 0)"
+`,
+			input: "foo:\n  c: 3\n  a: 1\n  b: 2\n",
+			want:  "foo:\n  a: 1\n  b: 2\n  c: 3\n",
+		},
+		{
 			name: "unsupported action type",
 			migration: `rules:
   - path: "$"
