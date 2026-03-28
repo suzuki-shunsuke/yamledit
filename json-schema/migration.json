@@ -7,7 +7,7 @@
       "properties": {
         "type": {
           "type": "string",
-          "description": "Action type: remove_keys, rename_key, or set_key"
+          "description": "Action type: remove_keys, rename_key, set_key, or add_values"
         },
         "keys": {
           "items": {
@@ -49,6 +49,15 @@
           },
           "type": "array",
           "description": "Where to insert a new key. The first matching condition is used. If none match, the key is appended at the end (for set_key)"
+        },
+        "values": {
+          "items": true,
+          "type": "array",
+          "description": "Values to add to the list (for add_values)"
+        },
+        "index": {
+          "type": "integer",
+          "description": "Index to insert values at. 0 for beginning, negative values count from end. Default -1 (for add_values)"
         }
       },
       "additionalProperties": false,

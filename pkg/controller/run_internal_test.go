@@ -36,7 +36,7 @@ func setupYAMLFile(t *testing.T, dir, name, content string) string {
 	return p
 }
 
-func TestRun(t *testing.T) { //nolint:funlen
+func TestRun(t *testing.T) { //nolint:funlen,maintidx
 	t.Parallel()
 	tests := []struct {
 		name      string
@@ -309,6 +309,43 @@ func TestRun(t *testing.T) { //nolint:funlen
 `,
 			input: "foo:\n  bar: 1\n  baz: 2\n",
 			want:  "foo:\n  bar: 99\n  baz: 2\n",
+		},
+		{
+			name: "add_values append to end",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: add_values
+        values:
+          - baz
+`,
+			input: "- foo\n- bar\n",
+			want:  "- foo\n- bar\n- baz\n",
+		},
+		{
+			name: "add_values insert at beginning",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: add_values
+        values:
+          - first
+        index: 0
+`,
+			input: "- foo\n- bar\n",
+			want:  "- first\n- foo\n- bar\n",
+		},
+		{
+			name: "add_values nested path",
+			migration: `rules:
+  - path: "$.items"
+    actions:
+      - type: add_values
+        values:
+          - c
+`,
+			input: "items:\n  - a\n  - b\n",
+			want:  "items:\n  - a\n  - b\n  - c\n",
 		},
 		{
 			name: "unsupported action type",

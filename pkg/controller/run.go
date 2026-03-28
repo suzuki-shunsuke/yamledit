@@ -53,31 +53,51 @@ func buildAction(path string, a *config.Action) (yamledit.Action, error) {
 		}
 		return yamledit.MapAction(path, yamledit.RemoveKeys(keys...)), nil
 	case "rename_key":
-		wd, err := parseWhenDuplicate(a.WhenDuplicate)
-		if err != nil {
-			return nil, err
-		}
-		return yamledit.MapAction(path, yamledit.RenameKey(a.Key, a.NewKey, wd)), nil
+		return buildRenameKeyAction(path, a)
 	case "set_key":
-		opt := &yamledit.SetKeyOption{
-			IgnoreIfKeyNotExist: a.SkipIfKeyNotFound,
-			IgnoreIfKeyExist:    a.SkipIfKeyFound,
-			ClearComment:        a.ClearComment,
-		}
-		for _, loc := range a.InsertAt {
-			yloc := &yamledit.InsertLocation{First: loc.First}
-			if loc.AfterKey != "" {
-				yloc.AfterKey = loc.AfterKey
-			}
-			if loc.BeforeKey != "" {
-				yloc.BeforeKey = loc.BeforeKey
-			}
-			opt.InsertLocations = append(opt.InsertLocations, yloc)
-		}
-		return yamledit.MapAction(path, yamledit.SetKey(a.Key, a.Value, opt)), nil
+		return buildSetKeyAction(path, a), nil
+	case "add_values":
+		return buildAddValuesAction(path, a), nil
 	default:
 		return nil, fmt.Errorf("unsupported action type: %s", a.Type)
 	}
+}
+
+func buildRenameKeyAction(path string, a *config.Action) (yamledit.Action, error) {
+	wd, err := parseWhenDuplicate(a.WhenDuplicate)
+	if err != nil {
+		return nil, err
+	}
+	return yamledit.MapAction(path, yamledit.RenameKey(a.Key, a.NewKey, wd)), nil
+}
+
+func buildSetKeyAction(path string, a *config.Action) yamledit.Action {
+	opt := &yamledit.SetKeyOption{
+		IgnoreIfKeyNotExist: a.SkipIfKeyNotFound,
+		IgnoreIfKeyExist:    a.SkipIfKeyFound,
+		ClearComment:        a.ClearComment,
+	}
+	for _, loc := range a.InsertAt {
+		yloc := &yamledit.InsertLocation{First: loc.First}
+		if loc.AfterKey != "" {
+			yloc.AfterKey = loc.AfterKey
+		}
+		if loc.BeforeKey != "" {
+			yloc.BeforeKey = loc.BeforeKey
+		}
+		opt.InsertLocations = append(opt.InsertLocations, yloc)
+	}
+	return yamledit.MapAction(path, yamledit.SetKey(a.Key, a.Value, opt))
+}
+
+func buildAddValuesAction(path string, a *config.Action) yamledit.Action {
+	idx := -1
+	if a.Index != nil {
+		idx = *a.Index
+	}
+	values := make([]any, len(a.Values))
+	copy(values, a.Values)
+	return yamledit.ListAction(path, yamledit.AddValuesToList(idx, values...))
 }
 
 func parseWhenDuplicate(s string) (yamledit.WhenDuplicateKey, error) {

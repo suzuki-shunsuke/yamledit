@@ -18,7 +18,7 @@ type Rule struct {
 }
 
 type Action struct {
-	Type              string            `json:"type" yaml:"type" jsonschema_description:"Action type: remove_keys, rename_key, or set_key"`
+	Type              string            `json:"type" yaml:"type" jsonschema_description:"Action type: remove_keys, rename_key, set_key, or add_values"`
 	Keys              []string          `json:"keys,omitempty" yaml:"keys" jsonschema_description:"Keys to remove (for remove_keys)"`
 	Key               string            `json:"key,omitempty" yaml:"key" jsonschema_description:"Target key name (for rename_key, set_key)"`
 	NewKey            string            `json:"new_key,omitempty" yaml:"new_key" jsonschema_description:"New key name (for rename_key)"`
@@ -28,6 +28,8 @@ type Action struct {
 	SkipIfKeyFound    bool              `json:"skip_if_key_found,omitempty" yaml:"skip_if_key_found" jsonschema_description:"If true, do nothing when the key already exists (for set_key)"`
 	ClearComment      bool              `json:"clear_comment,omitempty" yaml:"clear_comment" jsonschema_description:"If true, remove the comment on the existing key (for set_key)"`
 	InsertAt          []*InsertLocation `json:"insert_at,omitempty" yaml:"insert_at" jsonschema_description:"Where to insert a new key. The first matching condition is used. If none match, the key is appended at the end (for set_key)"`
+	Values            []any             `json:"values,omitempty" yaml:"values" jsonschema_description:"Values to add to the list (for add_values)"`
+	Index             *int              `json:"index,omitempty" yaml:"index" jsonschema_description:"Index to insert values at. 0 for beginning, negative values count from end. Default -1 (for add_values)"`
 }
 
 type InsertLocation struct {
