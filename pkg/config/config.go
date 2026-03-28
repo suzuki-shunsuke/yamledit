@@ -1,7 +1,10 @@
 package config
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -16,6 +19,7 @@ type Rule struct {
 	Path    string    `json:"path" yaml:"path" jsonschema_description:"YAML path to the target node (e.g. \"$\", \"$.foo\")"`
 	Actions []*Action `json:"actions" yaml:"actions" jsonschema_description:"List of actions to apply. Actions are evaluated in order."`
 	Files   []string  `json:"files,omitempty" yaml:"files" jsonschema_description:"File path patterns to apply this rule to. Glob patterns with ** supported. Paths starting with ! are excluded."`
+	Import  string    `json:"import,omitempty" yaml:"import" jsonschema_description:"URL to import rules from a remote migration file."`
 }
 
 type Action struct {
@@ -40,7 +44,51 @@ type InsertLocation struct {
 	First     bool   `json:"first,omitempty" yaml:"first" jsonschema_description:"Insert at the beginning"`
 }
 
-func ReadConfigs(dir string) ([]*Config, error) {
+func ResolveImports(ctx context.Context, cfg *Config) error {
+	var resolved []*Rule
+	for _, rule := range cfg.Rules {
+		if rule.Import == "" {
+			resolved = append(resolved, rule)
+			continue
+		}
+		imported, err := fetchAndParse(ctx, rule.Import)
+		if err != nil {
+			return fmt.Errorf("import %s: %w", rule.Import, err)
+		}
+		if err := ResolveImports(ctx, imported); err != nil {
+			return err
+		}
+		resolved = append(resolved, imported.Rules...)
+	}
+	cfg.Rules = resolved
+	return nil
+}
+
+func fetchAndParse(ctx context.Context, url string) (*Config, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch URL: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch URL: status %d", resp.StatusCode)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read response body: %w", err)
+	}
+	var cfg Config
+	if err := yaml.Unmarshal(b, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal YAML: %w", err)
+	}
+	return &cfg, nil
+}
+
+func ReadConfigs(ctx context.Context, dir string) ([]*Config, error) {
 	pattern := filepath.Join(dir, ".yamledit", "*.yaml")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
@@ -51,6 +99,9 @@ func ReadConfigs(dir string) ([]*Config, error) {
 		cfg, err := ReadConfig(p)
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)
+		}
+		if err := ResolveImports(ctx, cfg); err != nil {
+			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
 		}
 		configs = append(configs, cfg)
 	}

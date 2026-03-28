@@ -19,8 +19,8 @@ type ruleActions struct {
 	actions []yamledit.Action
 }
 
-func Run(_ context.Context, logger *slogutil.Logger, dir string, yamlFiles []string) error {
-	configs, err := config.ReadConfigs(dir)
+func Run(ctx context.Context, logger *slogutil.Logger, dir string, yamlFiles []string) error {
+	configs, err := config.ReadConfigs(ctx, dir)
 	if err != nil {
 		return fmt.Errorf("read migration configs: %w", err)
 	}

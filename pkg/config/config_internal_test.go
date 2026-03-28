@@ -1,6 +1,9 @@
 package config
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -348,7 +351,7 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen,maintidx
 			t.Parallel()
 			dir := t.TempDir()
 			tt.setup(t, dir)
-			got, err := ReadConfigs(dir)
+			got, err := ReadConfigs(context.Background(), dir)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -362,5 +365,69 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen,maintidx
 				t.Errorf("ReadConfigs() mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestResolveImports(t *testing.T) {
+	t.Parallel()
+	remoteConfig := `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(remoteConfig)) //nolint:errcheck
+	}))
+	t.Cleanup(srv.Close)
+
+	cfg := &Config{
+		Rules: []*Rule{
+			{
+				Path: "$",
+				Actions: []*Action{
+					{Type: "remove_keys", Keys: []string{"name"}},
+				},
+			},
+			{
+				Import: srv.URL + "/migration.yaml",
+			},
+		},
+	}
+	if err := ResolveImports(context.Background(), cfg); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []*Rule{
+		{
+			Path: "$",
+			Actions: []*Action{
+				{Type: "remove_keys", Keys: []string{"name"}},
+			},
+		},
+		{
+			Path: "$",
+			Actions: []*Action{
+				{Type: "remove_keys", Keys: []string{"age"}},
+			},
+		},
+	}
+	if diff := cmp.Diff(want, cfg.Rules); diff != "" {
+		t.Errorf("ResolveImports() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestResolveImports_noImport(t *testing.T) {
+	t.Parallel()
+	cfg := &Config{
+		Rules: []*Rule{
+			{Path: "$", Actions: []*Action{{Type: "remove_keys", Keys: []string{"age"}}}},
+		},
+	}
+	if err := ResolveImports(context.Background(), cfg); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Rules) != 1 {
+		t.Fatalf("expected 1 rule, got %d", len(cfg.Rules))
 	}
 }
