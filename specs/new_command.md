@@ -18,3 +18,6 @@ e.g.
 : Create .yamledit/foo.yaml
 yamledit new foo
 ```
+
+If `-test` option is set, `new` command creates test files instead of migration files.
+About test, please see [test command](test_command.md).

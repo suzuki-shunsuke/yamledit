@@ -48,7 +48,7 @@ func ReadConfigs(dir string) ([]*Config, error) {
 	}
 	configs := make([]*Config, 0, len(matches))
 	for _, p := range matches {
-		cfg, err := readConfig(p)
+		cfg, err := ReadConfig(p)
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)
 		}
@@ -57,7 +57,7 @@ func ReadConfigs(dir string) ([]*Config, error) {
 	return configs, nil
 }
 
-func readConfig(p string) (*Config, error) {
+func ReadConfig(p string) (*Config, error) {
 	b, err := os.ReadFile(p)
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
