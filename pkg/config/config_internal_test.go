@@ -176,6 +176,37 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen
 			},
 		},
 		{
+			name: "valid add_values migration",
+			setup: func(t *testing.T, dir string) {
+				t.Helper()
+				setupMigration(t, dir, "addvals", `rules:
+  - path: "$"
+    actions:
+      - type: add_values
+        values:
+          - foo
+          - bar
+        index: 0
+`)
+			},
+			want: []*Config{
+				{
+					Rules: []*Rule{
+						{
+							Path: "$",
+							Actions: []*Action{
+								{
+									Type:   "add_values",
+									Values: []any{"foo", "bar"},
+									Index:  new(0),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name:  "no yamledit dir",
 			setup: func(_ *testing.T, _ string) {},
 			want:  []*Config{},
