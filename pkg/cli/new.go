@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
@@ -41,7 +42,7 @@ func runAction(_ context.Context, logger *slogutil.Logger, args *RunArgs) error 
 		return fmt.Errorf("set log level: %w", err)
 	}
 	if args.Name == "" {
-		return fmt.Errorf("migration name is required")
+		return errors.New("migration name is required")
 	}
 
 	if err := config.New(args.Name); err != nil {
