@@ -52,6 +52,8 @@ func buildAction(path string, a *config.Action) (yamledit.Action, error) {
 			keys[i] = k
 		}
 		return yamledit.MapAction(path, yamledit.RemoveKeys(keys...)), nil
+	case "rename_key":
+		return yamledit.MapAction(path, yamledit.RenameKey(a.Key, a.NewKey, yamledit.Skip)), nil
 	default:
 		return nil, fmt.Errorf("unsupported action type: %s", a.Type)
 	}
