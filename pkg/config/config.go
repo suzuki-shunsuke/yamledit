@@ -22,6 +22,7 @@ type Action struct {
 	Keys              []string          `yaml:"keys"`                  // for remove_keys
 	Key               string            `yaml:"key"`                   // for rename_key, set_key
 	NewKey            string            `yaml:"new_key"`               // for rename_key
+	WhenDuplicate     string            `yaml:"when_duplicate"`        // for rename_key
 	Value             any               `yaml:"value"`                 // for set_key
 	SkipIfKeyNotFound bool              `yaml:"skip_if_key_not_found"` // for set_key
 	SkipIfKeyFound    bool              `yaml:"skip_if_key_found"`     // for set_key

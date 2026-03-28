@@ -53,7 +53,11 @@ func buildAction(path string, a *config.Action) (yamledit.Action, error) {
 		}
 		return yamledit.MapAction(path, yamledit.RemoveKeys(keys...)), nil
 	case "rename_key":
-		return yamledit.MapAction(path, yamledit.RenameKey(a.Key, a.NewKey, yamledit.Skip)), nil
+		wd, err := parseWhenDuplicate(a.WhenDuplicate)
+		if err != nil {
+			return nil, err
+		}
+		return yamledit.MapAction(path, yamledit.RenameKey(a.Key, a.NewKey, wd)), nil
 	case "set_key":
 		opt := &yamledit.SetKeyOption{
 			IgnoreIfKeyNotExist: a.SkipIfKeyNotFound,
@@ -73,6 +77,21 @@ func buildAction(path string, a *config.Action) (yamledit.Action, error) {
 		return yamledit.MapAction(path, yamledit.SetKey(a.Key, a.Value, opt)), nil
 	default:
 		return nil, fmt.Errorf("unsupported action type: %s", a.Type)
+	}
+}
+
+func parseWhenDuplicate(s string) (yamledit.WhenDuplicateKey, error) {
+	switch s {
+	case "", "skip":
+		return yamledit.Skip, nil
+	case "ignore_existing_key":
+		return yamledit.IgnoreExistingKey, nil
+	case "remove_old_key":
+		return yamledit.RemoveOldKey, nil
+	case "fail":
+		return yamledit.RaiseError, nil
+	default:
+		return 0, fmt.Errorf("unsupported when_duplicate value: %s", s)
 	}
 }
 
