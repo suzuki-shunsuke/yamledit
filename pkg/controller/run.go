@@ -20,14 +20,20 @@ type ruleActions struct {
 	actions []yamledit.Action
 }
 
-func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, dir string, yamlFiles []string) error {
-	configs, err := config.ReadConfigs(ctx, ghClient, dir)
+func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, dir string, migrations, yamlFiles []string) error {
+	configs, err := loadConfigs(ctx, ghClient, dir, migrations)
 	if err != nil {
 		return fmt.Errorf("read migration configs: %w", err)
 	}
 	rules, err := buildRuleActions(logger, configs)
 	if err != nil {
 		return fmt.Errorf("build actions: %w", err)
+	}
+	if len(yamlFiles) == 0 {
+		yamlFiles, err = discoverYAMLFiles(dir)
+		if err != nil {
+			return fmt.Errorf("discover YAML files: %w", err)
+		}
 	}
 	for _, f := range yamlFiles {
 		for _, rule := range rules {
@@ -44,6 +50,33 @@ func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, dir 
 		}
 	}
 	return nil
+}
+
+func loadConfigs(ctx context.Context, ghClient *gh.Client, dir string, migrations []string) ([]*config.Config, error) {
+	if len(migrations) == 0 {
+		configs, err := config.ReadConfigs(ctx, ghClient, dir)
+		if err != nil {
+			return nil, fmt.Errorf("read all configs: %w", err)
+		}
+		return configs, nil
+	}
+	configs, err := config.ReadConfigsByPaths(ctx, ghClient, dir, migrations)
+	if err != nil {
+		return nil, fmt.Errorf("read configs by paths: %w", err)
+	}
+	return configs, nil
+}
+
+func discoverYAMLFiles(dir string) ([]string, error) {
+	var files []string
+	for _, pattern := range []string{"**/*.yaml", "**/*.yml"} {
+		matches, err := doublestar.Glob(os.DirFS(dir), pattern)
+		if err != nil {
+			return nil, fmt.Errorf("glob %s: %w", pattern, err)
+		}
+		files = append(files, matches...)
+	}
+	return files, nil
 }
 
 func buildRuleActions(logger *slogutil.Logger, configs []*config.Config) ([]*ruleActions, error) {
