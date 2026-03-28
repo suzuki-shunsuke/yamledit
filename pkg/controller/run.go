@@ -63,6 +63,8 @@ func buildAction(logger *slogutil.Logger, path string, a *config.Action) (yamled
 		return buildSortKeyAction(logger, path, a)
 	case "remove_values":
 		return buildRemoveValuesAction(logger, path, a)
+	case "sort_list":
+		return buildSortListAction(logger, path, a)
 	default:
 		return nil, fmt.Errorf("unsupported action type: %s", a.Type)
 	}
@@ -144,6 +146,33 @@ func buildRemoveValuesAction(logger *slogutil.Logger, path string, a *config.Act
 			return false, nil
 		}
 		return b, nil
+	})), nil
+}
+
+func buildSortListAction(logger *slogutil.Logger, path string, a *config.Action) (yamledit.Action, error) {
+	program, err := expr.Compile(a.Expr, expr.Env(map[string]any{
+		"a": map[string]any{},
+		"b": map[string]any{},
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("compile sort_list expr: %w", err)
+	}
+	return yamledit.ListAction(path, yamledit.SortList(func(a, b *yamledit.Node[any]) int {
+		env := map[string]any{
+			"a": map[string]any{"value": a.Value, "comment": a.Comment},
+			"b": map[string]any{"value": b.Value, "comment": b.Comment},
+		}
+		result, err := expr.Run(program, env)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 0
+		}
+		i, ok := result.(int)
+		if !ok {
+			logger.Error("sort_list expr must return int", "got_type", fmt.Sprintf("%T", result))
+			return 0
+		}
+		return i
 	})), nil
 }
 

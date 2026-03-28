@@ -37,3 +37,5 @@ rules:
     - `.rules[].actions[].expr`: The sorting logic expression
   - `remove_values`: Remove elements from lists
     - `.rules[].actions[].expr`: The expression to select elements to remove
+  - `sort_list`: Sort lists
+    - `.rules[].actions[].expr`: The sorting logic expression

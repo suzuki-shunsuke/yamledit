@@ -414,6 +414,39 @@ func TestRun(t *testing.T) { //nolint:funlen,maintidx
 			want:  "items:\n  - a\n  - c\n",
 		},
 		{
+			name: "sort_list alphabetical",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: sort_list
+        expr: "a.value < b.value ? -1 : (a.value > b.value ? 1 : 0)"
+`,
+			input: "- cherry\n- apple\n- banana\n",
+			want:  "- apple\n- banana\n- cherry\n",
+		},
+		{
+			name: "sort_list already sorted",
+			migration: `rules:
+  - path: "$"
+    actions:
+      - type: sort_list
+        expr: "a.value < b.value ? -1 : (a.value > b.value ? 1 : 0)"
+`,
+			input: "- apple\n- banana\n- cherry\n",
+			want:  "- apple\n- banana\n- cherry\n",
+		},
+		{
+			name: "sort_list nested path",
+			migration: `rules:
+  - path: "$.items"
+    actions:
+      - type: sort_list
+        expr: "a.value < b.value ? -1 : (a.value > b.value ? 1 : 0)"
+`,
+			input: "items:\n  - c\n  - a\n  - b\n",
+			want:  "items:\n  - a\n  - b\n  - c\n",
+		},
+		{
 			name: "unsupported action type",
 			migration: `rules:
   - path: "$"
