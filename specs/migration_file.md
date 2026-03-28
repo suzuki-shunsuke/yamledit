@@ -45,3 +45,4 @@ rules:
   - When file paths are passed as command-line arguments, the rule is applied only to paths that match `files`.
 - `.rules[].import`: Import rules from a remote migration file. The imported file has the same format as a migration file.
   - URL: Remote file URL
+  - `github.com/<owner>/<repo>/<path>:<ref>` GitHub Contents

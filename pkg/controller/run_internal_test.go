@@ -464,7 +464,7 @@ func TestRun(t *testing.T) { //nolint:funlen,maintidx
 			setupMigration(t, dir, "test", tt.migration)
 			yamlFile := setupYAMLFile(t, dir, "input.yaml", tt.input)
 
-			err := Run(context.Background(), newLogger(), dir, []string{yamlFile})
+			err := Run(context.Background(), newLogger(), nil, dir, []string{yamlFile})
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -499,7 +499,7 @@ func TestRun_multipleFiles(t *testing.T) {
 	file1 := setupYAMLFile(t, dir, "a.yaml", "name: alice\nage: 30\n")
 	file2 := setupYAMLFile(t, dir, "b.yaml", "name: bob\nage: 25\n")
 
-	if err := Run(context.Background(), newLogger(), dir, []string{file1, file2}); err != nil {
+	if err := Run(context.Background(), newLogger(), nil, dir, []string{file1, file2}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -535,7 +535,7 @@ func TestRun_filesFilter(t *testing.T) { //nolint:funlen,cyclop
           - age
 `)
 		yamlFile := setupYAMLFile(t, dir, "input.yaml", "name: alice\nage: 30\n")
-		if err := Run(context.Background(), newLogger(), dir, []string{yamlFile}); err != nil {
+		if err := Run(context.Background(), newLogger(), nil, dir, []string{yamlFile}); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		got, err := os.ReadFile(yamlFile)
@@ -559,7 +559,7 @@ func TestRun_filesFilter(t *testing.T) { //nolint:funlen,cyclop
           - age
 `)
 		yamlFile := setupYAMLFile(t, dir, "input.yaml", "name: alice\nage: 30\n")
-		if err := Run(context.Background(), newLogger(), dir, []string{yamlFile}); err != nil {
+		if err := Run(context.Background(), newLogger(), nil, dir, []string{yamlFile}); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		got, err := os.ReadFile(yamlFile)
@@ -584,7 +584,7 @@ func TestRun_filesFilter(t *testing.T) { //nolint:funlen,cyclop
           - age
 `)
 		yamlFile := setupYAMLFile(t, dir, "input.yaml", "name: alice\nage: 30\n")
-		if err := Run(context.Background(), newLogger(), dir, []string{yamlFile}); err != nil {
+		if err := Run(context.Background(), newLogger(), nil, dir, []string{yamlFile}); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		got, err := os.ReadFile(yamlFile)
@@ -606,7 +606,7 @@ func TestRun_filesFilter(t *testing.T) { //nolint:funlen,cyclop
           - age
 `)
 		yamlFile := setupYAMLFile(t, dir, "input.yaml", "name: alice\nage: 30\n")
-		if err := Run(context.Background(), newLogger(), dir, []string{yamlFile}); err != nil {
+		if err := Run(context.Background(), newLogger(), nil, dir, []string{yamlFile}); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		got, err := os.ReadFile(yamlFile)
@@ -659,7 +659,7 @@ func TestRun_nonexistentFile(t *testing.T) {
           - age
 `)
 
-	err := Run(context.Background(), newLogger(), dir, []string{filepath.Join(dir, "nonexistent.yaml")})
+	err := Run(context.Background(), newLogger(), nil, dir, []string{filepath.Join(dir, "nonexistent.yaml")})
 	if err == nil {
 		t.Fatal("expected error for nonexistent file, got nil")
 	}
