@@ -9,31 +9,31 @@ import (
 )
 
 type Config struct {
-	Rules []*Rule `yaml:"rules"`
+	Rules []*Rule `json:"rules" yaml:"rules" jsonschema_description:"List of migration rules. Rules are evaluated in order."`
 }
 
 type Rule struct {
-	Path    string    `yaml:"path"`
-	Actions []*Action `yaml:"actions"`
+	Path    string    `json:"path" yaml:"path" jsonschema_description:"YAML path to the target node (e.g. \"$\", \"$.foo\")"`
+	Actions []*Action `json:"actions" yaml:"actions" jsonschema_description:"List of actions to apply. Actions are evaluated in order."`
 }
 
 type Action struct {
-	Type              string            `yaml:"type"`
-	Keys              []string          `yaml:"keys"`                  // for remove_keys
-	Key               string            `yaml:"key"`                   // for rename_key, set_key
-	NewKey            string            `yaml:"new_key"`               // for rename_key
-	WhenDuplicate     string            `yaml:"when_duplicate"`        // for rename_key
-	Value             any               `yaml:"value"`                 // for set_key
-	SkipIfKeyNotFound bool              `yaml:"skip_if_key_not_found"` // for set_key
-	SkipIfKeyFound    bool              `yaml:"skip_if_key_found"`     // for set_key
-	ClearComment      bool              `yaml:"clear_comment"`         // for set_key
-	InsertAt          []*InsertLocation `yaml:"insert_at"`             // for set_key
+	Type              string            `json:"type" yaml:"type" jsonschema_description:"Action type: remove_keys, rename_key, or set_key"`
+	Keys              []string          `json:"keys,omitempty" yaml:"keys" jsonschema_description:"Keys to remove (for remove_keys)"`
+	Key               string            `json:"key,omitempty" yaml:"key" jsonschema_description:"Target key name (for rename_key, set_key)"`
+	NewKey            string            `json:"new_key,omitempty" yaml:"new_key" jsonschema_description:"New key name (for rename_key)"`
+	WhenDuplicate     string            `json:"when_duplicate,omitempty" yaml:"when_duplicate" jsonschema_description:"Behavior when new_key already exists: skip (default), ignore_existing_key, remove_old_key, fail (for rename_key)"`
+	Value             any               `json:"value,omitempty" yaml:"value" jsonschema_description:"Value to set (for set_key)"`
+	SkipIfKeyNotFound bool              `json:"skip_if_key_not_found,omitempty" yaml:"skip_if_key_not_found" jsonschema_description:"If true, do nothing when the key does not exist (for set_key)"`
+	SkipIfKeyFound    bool              `json:"skip_if_key_found,omitempty" yaml:"skip_if_key_found" jsonschema_description:"If true, do nothing when the key already exists (for set_key)"`
+	ClearComment      bool              `json:"clear_comment,omitempty" yaml:"clear_comment" jsonschema_description:"If true, remove the comment on the existing key (for set_key)"`
+	InsertAt          []*InsertLocation `json:"insert_at,omitempty" yaml:"insert_at" jsonschema_description:"Where to insert a new key. The first matching condition is used. If none match, the key is appended at the end (for set_key)"`
 }
 
 type InsertLocation struct {
-	AfterKey  string `yaml:"after_key"`
-	BeforeKey string `yaml:"before_key"`
-	First     bool   `yaml:"first"`
+	AfterKey  string `json:"after_key,omitempty" yaml:"after_key" jsonschema_description:"Insert after this key"`
+	BeforeKey string `json:"before_key,omitempty" yaml:"before_key" jsonschema_description:"Insert before this key"`
+	First     bool   `json:"first,omitempty" yaml:"first" jsonschema_description:"Insert at the beginning"`
 }
 
 func ReadConfigs(dir string) ([]*Config, error) {
