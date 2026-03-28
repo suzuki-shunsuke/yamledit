@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestNew(t *testing.T) {
+func TestNew(t *testing.T) { //nolint:funlen
 	t.Parallel()
 	tests := []struct {
 		name    string
