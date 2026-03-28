@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/suzuki-shunsuke/yamledit/pkg/config/config",
+  "$ref": "#/$defs/Config",
+  "$defs": {
+    "Action": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Action type: remove_keys, rename_key, or set_key"
+        },
+        "keys": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array",
+          "description": "Keys to remove (for remove_keys)"
+        },
+        "key": {
+          "type": "string",
+          "description": "Target key name (for rename_key, set_key)"
+        },
+        "new_key": {
+          "type": "string",
+          "description": "New key name (for rename_key)"
+        },
+        "when_duplicate": {
+          "type": "string",
+          "description": "Behavior when new_key already exists: skip (default), ignore_existing_key, remove_old_key, fail (for rename_key)"
+        },
+        "value": {
+          "description": "Value to set (for set_key)"
+        },
+        "skip_if_key_not_found": {
+          "type": "boolean",
+          "description": "If true, do nothing when the key does not exist (for set_key)"
+        },
+        "skip_if_key_found": {
+          "type": "boolean",
+          "description": "If true, do nothing when the key already exists (for set_key)"
+        },
+        "clear_comment": {
+          "type": "boolean",
+          "description": "If true, remove the comment on the existing key (for set_key)"
+        },
+        "insert_at": {
+          "items": {
+            "$ref": "#/$defs/InsertLocation"
+          },
+          "type": "array",
+          "description": "Where to insert a new key. The first matching condition is used. If none match, the key is appended at the end (for set_key)"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "type"
+      ]
+    },
+    "Config": {
+      "properties": {
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/Rule"
+          },
+          "type": "array",
+          "description": "List of migration rules. Rules are evaluated in order."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "rules"
+      ]
+    },
+    "InsertLocation": {
+      "properties": {
+        "after_key": {
+          "type": "string",
+          "description": "Insert after this key"
+        },
+        "before_key": {
+          "type": "string",
+          "description": "Insert before this key"
+        },
+        "first": {
+          "type": "boolean",
+          "description": "Insert at the beginning"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Rule": {
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "YAML path to the target node (e.g. \"$\", \"$.foo\")"
+        },
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/Action"
+          },
+          "type": "array",
+          "description": "List of actions to apply. Actions are evaluated in order."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "path",
+        "actions"
+      ]
+    }
+  }
+}
