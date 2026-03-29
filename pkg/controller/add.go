@@ -59,8 +59,8 @@ func readOrCreateConfig(configPath string) ([]byte, error) {
 }
 
 func checkNameUniqueness(content []byte, name string) error {
-	var cfg config.ProjectConfig
-	if err := config.UnmarshalProjectConfig(content, &cfg); err != nil {
+	var cfg config.Config
+	if err := config.UnmarshalConfig(content, &cfg); err != nil {
 		return fmt.Errorf("parse config file: %w", err)
 	}
 	if _, ok := cfg.FindReusableRule(name); ok {
@@ -77,8 +77,8 @@ func downloadMigration(ctx context.Context, logger *slogutil.Logger, ghClient *g
 }
 
 func writeReusableRule(configPath string, content []byte, name, migration string) error {
-	var cfg config.ProjectConfig
-	if err := config.UnmarshalProjectConfig(content, &cfg); err != nil {
+	var cfg config.Config
+	if err := config.UnmarshalConfig(content, &cfg); err != nil {
 		return fmt.Errorf("parse config file: %w", err)
 	}
 	cfg.ReusableRules = append(cfg.ReusableRules, config.ReusableRule{

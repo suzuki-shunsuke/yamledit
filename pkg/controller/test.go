@@ -58,7 +58,7 @@ func discoverMigrations(dir string) ([]string, error) {
 
 func testMigration(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir, name string) (bool, error) { //nolint:cyclop
 	cfgPath := filepath.Join(dir, ".yamledit", name+".yaml")
-	cfg, err := config.ReadConfig(cfgPath)
+	cfg, err := config.ReadRuleset(cfgPath)
 	if err != nil {
 		return false, fmt.Errorf("read config: %w", err)
 	}
@@ -139,7 +139,7 @@ func runTestCase(logger *slogutil.Logger, testDir, fname, migrationName string, 
 	return true, nil
 }
 
-func buildAllActions(logger *slogutil.Logger, cfg *config.Config) ([]yamledit.Action, error) {
+func buildAllActions(logger *slogutil.Logger, cfg *config.Ruleset) ([]yamledit.Action, error) {
 	var actions []yamledit.Action
 	for _, rule := range cfg.Rules {
 		for _, a := range rule.Actions {
