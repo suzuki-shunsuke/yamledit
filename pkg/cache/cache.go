@@ -102,7 +102,7 @@ func (c *Cache) get(logger *slog.Logger, dir, ref string) ([]byte, bool) {
 	}
 	var meta Metadata
 	if err := json.Unmarshal(metaBytes, &meta); err != nil {
-		logger.Debug("failed to parse cached metadata.json", "path", metaPath, "error", err)
+		logger.Debug("parse cached metadata.json", "path", metaPath, "error", err)
 		return nil, false
 	}
 	if isExpired(meta, ref) {
@@ -116,7 +116,7 @@ func (c *Cache) get(logger *slog.Logger, dir, ref string) ([]byte, bool) {
 	// Validate that content is valid YAML.
 	var v any
 	if err := yaml.Unmarshal(content, &v); err != nil {
-		logger.Debug("failed to parse cached migration.yaml", "path", migrationPath, "error", err)
+		logger.Debug("parse cached migration.yaml", "path", migrationPath, "error", err)
 		return nil, false
 	}
 	return content, true
