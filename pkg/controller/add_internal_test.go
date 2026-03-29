@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -125,7 +126,7 @@ func TestAdd(t *testing.T) { //nolint:funlen,gocognit,cyclop
 				}
 			}
 
-			err := Add(context.Background(), newLogger(), nil, nil, dir, tt.alias, migration, tt.force, tt.global)
+			err := Add(context.Background(), io.Discard, newLogger(), nil, nil, dir, tt.alias, migration, tt.force, tt.global)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")

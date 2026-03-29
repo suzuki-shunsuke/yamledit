@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,7 +19,7 @@ import (
 	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
 
-func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir, alias, migration string, force, global bool) error {
+func Add(ctx context.Context, stderr io.Writer, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir, alias, migration string, force, global bool) error {
 	if err := validateAddArgs(alias, migration); err != nil {
 		return err
 	}
@@ -26,7 +27,7 @@ func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *c
 	if err != nil {
 		return err
 	}
-	content, err := readOrCreateConfig(configPath)
+	content, isNew, err := readOrCreateConfig(configPath)
 	if err != nil {
 		return err
 	}
@@ -41,7 +42,15 @@ func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *c
 	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil { //nolint:mnd
 		return fmt.Errorf("create config directory: %w", err)
 	}
-	return writeReusableRule(configPath, content, alias, migration, force)
+	if err := writeReusableRule(configPath, content, alias, migration, force); err != nil {
+		return err
+	}
+	if isNew {
+		fmt.Fprintf(stderr, "%s was created.\n", configPath)
+	} else {
+		fmt.Fprintf(stderr, "%s was updated.\n", configPath)
+	}
+	return nil
 }
 
 func resolveAddConfigPath(dir string, global bool) (string, error) {
@@ -66,15 +75,15 @@ func validateAddArgs(alias, migration string) error {
 	return nil
 }
 
-func readOrCreateConfig(configPath string) ([]byte, error) {
+func readOrCreateConfig(configPath string) ([]byte, bool, error) {
 	b, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []byte("# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/yamledit/main/json-schema/config.json\nreusable_rules: []\n"), nil
+			return []byte("# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/yamledit/main/json-schema/config.json\nreusable_rules: []\n"), true, nil
 		}
-		return nil, fmt.Errorf("read config file: %w", err)
+		return nil, false, fmt.Errorf("read config file: %w", err)
 	}
-	return b, nil
+	return b, false, nil
 }
 
 func checkNameUniqueness(content []byte, name string) error {

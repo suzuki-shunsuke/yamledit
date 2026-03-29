@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
 	"github.com/suzuki-shunsuke/yamledit/pkg/cache"
@@ -73,5 +74,5 @@ func addAction(ctx context.Context, logger *slogutil.Logger, args *AddArgs) erro
 	}
 	ghClient := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv(), ghtknEnabled)
 	c := cache.New(args.NoCache)
-	return controller.Add(ctx, logger, ghClient, c, ".", args.Alias, args.Migration, args.Force, args.Global) //nolint:wrapcheck
+	return controller.Add(ctx, os.Stderr, logger, ghClient, c, ".", args.Alias, args.Migration, args.Force, args.Global) //nolint:wrapcheck
 }

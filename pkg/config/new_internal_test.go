@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -54,7 +55,7 @@ func TestNew(t *testing.T) { //nolint:funlen
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			dir := t.TempDir()
-			err := New(dir, tt.input)
+			err := New(io.Discard, dir, tt.input)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -92,7 +93,7 @@ func TestNew_idempotent(t *testing.T) {
 	dir := t.TempDir()
 	name := "my-migration"
 
-	if err := New(dir, name); err != nil {
+	if err := New(io.Discard, dir, name); err != nil {
 		t.Fatalf("first call: %v", err)
 	}
 
@@ -110,7 +111,7 @@ func TestNew_idempotent(t *testing.T) {
 		infos[i] = info
 	}
 
-	if err := New(dir, name); err != nil {
+	if err := New(io.Discard, dir, name); err != nil {
 		t.Fatalf("second call: %v", err)
 	}
 
@@ -140,7 +141,7 @@ func TestNew_migrationExistsButTestFilesMissing(t *testing.T) {
 	}
 
 	// Run New — should create test files even though migration exists
-	if err := New(dir, name); err != nil {
+	if err := New(io.Discard, dir, name); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
