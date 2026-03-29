@@ -188,7 +188,7 @@ func ReadConfigs(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, 
 		}
 		configs = append(configs, cfg)
 	}
-	// Also load reusable rules from project config
+	// Also load reusable rules from project config (global config is not included in default run)
 	projCfg, err := ReadProjectConfig(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read project config: %w", err)
@@ -269,7 +269,22 @@ func resolveReusableRule(ctx context.Context, logger *slog.Logger, ghClient *gh.
 		}
 		return cfg, nil
 	}
-	return nil, fmt.Errorf("migration %q not found in .yamledit/ or reusable_rules", name)
+	// Fallback to global config
+	globalCfg, err := ReadGlobalConfig()
+	if err != nil {
+		return nil, fmt.Errorf("read global config: %w", err)
+	}
+	if target, ok := globalCfg.FindReusableRule(name); ok {
+		cfg, err := resolveImport(ctx, logger, ghClient, c, target)
+		if err != nil {
+			return nil, fmt.Errorf("resolve global reusable rule %s (%s): %w", name, target, err)
+		}
+		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
+			return nil, fmt.Errorf("resolve imports in global reusable rule %s: %w", name, err)
+		}
+		return cfg, nil
+	}
+	return nil, fmt.Errorf("migration %q not found in .yamledit/, project config, or global config", name)
 }
 
 var yamlSuffixPattern = regexp.MustCompile(`\.ya?ml$`)

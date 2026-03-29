@@ -601,6 +601,32 @@ func TestReadConfigsByPaths_reusableRuleNotFound(t *testing.T) {
 	}
 }
 
+func TestReadConfigsByPaths_globalConfigFallback(t *testing.T) {
+	remoteConfig := testRemoteConfig
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(remoteConfig)) //nolint:errcheck
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	// No local migration, no project config reusable rule
+	// Set up global config with the rule
+	globalDir := t.TempDir()
+	globalConfigPath := filepath.Join(globalDir, "config.yaml")
+	if err := os.WriteFile(globalConfigPath, []byte("reusable_rules:\n  - name: my-rule\n    import: "+srv.URL+"/migration.yaml\n"), 0o644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+	t.Setenv("YAMLEDIT_GLOBAL_CONFIG", globalConfigPath)
+
+	configs, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"my-rule"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(configs) != 1 {
+		t.Fatalf("expected 1 config from global fallback, got %d", len(configs))
+	}
+}
+
 func TestResolveImports_noImport(t *testing.T) {
 	t.Parallel()
 	cfg := &Config{

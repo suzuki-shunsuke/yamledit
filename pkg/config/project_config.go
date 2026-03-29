@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/goccy/go-yaml"
 	"github.com/suzuki-shunsuke/yamledit/pkg/cache"
@@ -57,6 +58,47 @@ func ReadProjectConfig(dir string) (*ProjectConfig, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// ReadGlobalConfig reads the global config and returns the ProjectConfig.
+// Returns an empty ProjectConfig if no global config is found.
+func ReadGlobalConfig() (*ProjectConfig, error) {
+	p := resolveGlobalConfigPath()
+	if p == "" {
+		return &ProjectConfig{}, nil
+	}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &ProjectConfig{}, nil
+		}
+		return nil, fmt.Errorf("read global config: %w", err)
+	}
+	var cfg ProjectConfig
+	if err := UnmarshalProjectConfig(b, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+func resolveGlobalConfigPath() string {
+	if v := os.Getenv("YAMLEDIT_GLOBAL_CONFIG"); v != "" {
+		return v
+	}
+	if v := os.Getenv("XDG_CONFIG_HOME"); v != "" {
+		return filepath.Join(v, "yamledit", "config.yaml")
+	}
+	if runtime.GOOS == "windows" {
+		if v := os.Getenv("LOCALAPPDATA"); v != "" {
+			return filepath.Join(v, "yamledit", "config.yaml")
+		}
+		return ""
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, ".config", "yamledit", "config.yaml")
 }
 
 // DownloadAndCache downloads a remote migration and caches it.
