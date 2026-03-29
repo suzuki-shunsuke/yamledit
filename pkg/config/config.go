@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/suzuki-shunsuke/yamledit/pkg/cache"
 	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
 
@@ -47,18 +48,18 @@ type InsertLocation struct {
 	First     bool   `json:"first,omitempty" yaml:"first" jsonschema_description:"Insert at the beginning"`
 }
 
-func ResolveImports(ctx context.Context, ghClient *gh.Client, cfg *Config) error {
+func ResolveImports(ctx context.Context, ghClient *gh.Client, c *cache.Cache, cfg *Config) error {
 	var resolved []*Rule
 	for _, rule := range cfg.Rules {
 		if rule.Import == "" {
 			resolved = append(resolved, rule)
 			continue
 		}
-		imported, err := resolveImport(ctx, ghClient, rule.Import)
+		imported, err := resolveImport(ctx, ghClient, c, rule.Import)
 		if err != nil {
 			return fmt.Errorf("import %s: %w", rule.Import, err)
 		}
-		if err := ResolveImports(ctx, ghClient, imported); err != nil {
+		if err := ResolveImports(ctx, ghClient, c, imported); err != nil {
 			return err
 		}
 		resolved = append(resolved, imported.Rules...)
@@ -67,11 +68,55 @@ func ResolveImports(ctx context.Context, ghClient *gh.Client, cfg *Config) error
 	return nil
 }
 
-func resolveImport(ctx context.Context, ghClient *gh.Client, s string) (*Config, error) {
+func resolveImport(ctx context.Context, ghClient *gh.Client, c *cache.Cache, s string) (*Config, error) {
 	if owner, repo, path, ref, ok := parseGitHubImport(s); ok {
-		return fetchAndParseGitHub(ctx, ghClient, owner, repo, path, ref)
+		return resolveGitHubImport(ctx, ghClient, c, owner, repo, path, ref)
 	}
-	return fetchAndParse(ctx, s)
+	return resolveURLImport(ctx, c, s)
+}
+
+func resolveGitHubImport(ctx context.Context, ghClient *gh.Client, c *cache.Cache, owner, repo, path, ref string) (*Config, error) {
+	if b, ok := c.GetGitHub(owner, repo, path, ref); ok {
+		var cfg Config
+		if err := yaml.Unmarshal(b, &cfg); err != nil {
+			return nil, fmt.Errorf("unmarshal cached YAML: %w", err)
+		}
+		return &cfg, nil
+	}
+	content, err := fetchGitHubContent(ctx, ghClient, owner, repo, path, ref)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.PutGitHub(owner, repo, path, ref, []byte(content)); err != nil {
+		return nil, fmt.Errorf("cache GitHub content: %w", err)
+	}
+	var cfg Config
+	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal YAML: %w", err)
+	}
+	return &cfg, nil
+}
+
+func resolveURLImport(ctx context.Context, c *cache.Cache, url string) (*Config, error) {
+	if b, ok := c.GetURL(url); ok {
+		var cfg Config
+		if err := yaml.Unmarshal(b, &cfg); err != nil {
+			return nil, fmt.Errorf("unmarshal cached YAML: %w", err)
+		}
+		return &cfg, nil
+	}
+	b, err := fetchURLContent(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.PutURL(url, b); err != nil {
+		return nil, fmt.Errorf("cache URL content: %w", err)
+	}
+	var cfg Config
+	if err := yaml.Unmarshal(b, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal YAML: %w", err)
+	}
+	return &cfg, nil
 }
 
 func parseGitHubImport(s string) (owner, repo, path, ref string, ok bool) {
@@ -93,19 +138,15 @@ func parseGitHubImport(s string) (owner, repo, path, ref string, ok bool) {
 	return parts[0], parts[1], parts[2], ref, true
 }
 
-func fetchAndParseGitHub(ctx context.Context, ghClient *gh.Client, owner, repo, path, ref string) (*Config, error) {
+func fetchGitHubContent(ctx context.Context, ghClient *gh.Client, owner, repo, path, ref string) (string, error) {
 	content, err := ghClient.GetContent(ctx, owner, repo, path, ref)
 	if err != nil {
-		return nil, fmt.Errorf("get GitHub content: %w", err)
+		return "", fmt.Errorf("get GitHub content: %w", err)
 	}
-	var cfg Config
-	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal YAML: %w", err)
-	}
-	return &cfg, nil
+	return content, nil
 }
 
-func fetchAndParse(ctx context.Context, url string) (*Config, error) {
+func fetchURLContent(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
@@ -122,14 +163,10 @@ func fetchAndParse(ctx context.Context, url string) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read response body: %w", err)
 	}
-	var cfg Config
-	if err := yaml.Unmarshal(b, &cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal YAML: %w", err)
-	}
-	return &cfg, nil
+	return b, nil
 }
 
-func ReadConfigs(ctx context.Context, ghClient *gh.Client, dir string) ([]*Config, error) {
+func ReadConfigs(ctx context.Context, ghClient *gh.Client, c *cache.Cache, dir string) ([]*Config, error) {
 	pattern := filepath.Join(dir, ".yamledit", "*.yaml")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
@@ -141,7 +178,7 @@ func ReadConfigs(ctx context.Context, ghClient *gh.Client, dir string) ([]*Confi
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)
 		}
-		if err := ResolveImports(ctx, ghClient, cfg); err != nil {
+		if err := ResolveImports(ctx, ghClient, c, cfg); err != nil {
 			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
 		}
 		configs = append(configs, cfg)
@@ -149,7 +186,7 @@ func ReadConfigs(ctx context.Context, ghClient *gh.Client, dir string) ([]*Confi
 	return configs, nil
 }
 
-func ReadConfigsByPaths(ctx context.Context, ghClient *gh.Client, dir string, paths []string) ([]*Config, error) {
+func ReadConfigsByPaths(ctx context.Context, ghClient *gh.Client, c *cache.Cache, dir string, paths []string) ([]*Config, error) {
 	configs := make([]*Config, 0, len(paths))
 	for _, p := range paths {
 		if !filepath.IsAbs(p) && !yamlSuffixPattern.MatchString(p) {
@@ -159,7 +196,7 @@ func ReadConfigsByPaths(ctx context.Context, ghClient *gh.Client, dir string, pa
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)
 		}
-		if err := ResolveImports(ctx, ghClient, cfg); err != nil {
+		if err := ResolveImports(ctx, ghClient, c, cfg); err != nil {
 			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
 		}
 		configs = append(configs, cfg)
