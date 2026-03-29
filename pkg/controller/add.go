@@ -15,7 +15,7 @@ import (
 	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
 
-func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir, alias, migration string) error {
+func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir, alias, migration string, force bool) error {
 	if err := validateAddArgs(alias, migration); err != nil {
 		return err
 	}
@@ -24,8 +24,10 @@ func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *c
 	if err != nil {
 		return err
 	}
-	if err := checkNameUniqueness(content, alias); err != nil {
-		return err
+	if !force {
+		if err := checkNameUniqueness(content, alias); err != nil {
+			return err
+		}
 	}
 	if err := downloadMigration(ctx, logger, ghClient, c, migration); err != nil {
 		return fmt.Errorf("download migration: %w", err)
@@ -33,7 +35,7 @@ func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *c
 	if err := os.MkdirAll(filepath.Join(dir, ".yamledit"), 0o755); err != nil { //nolint:mnd
 		return fmt.Errorf("create .yamledit directory: %w", err)
 	}
-	return writeReusableRule(configPath, content, alias, migration)
+	return writeReusableRule(configPath, content, alias, migration, force)
 }
 
 func validateAddArgs(alias, migration string) error {
@@ -76,15 +78,25 @@ func downloadMigration(ctx context.Context, logger *slogutil.Logger, ghClient *g
 	return nil
 }
 
-func writeReusableRule(configPath string, content []byte, name, migration string) error {
+func writeReusableRule(configPath string, content []byte, name, migration string, force bool) error {
 	var cfg config.Config
 	if err := config.UnmarshalConfig(content, &cfg); err != nil {
 		return fmt.Errorf("parse config file: %w", err)
 	}
-	cfg.ReusableRules = append(cfg.ReusableRules, config.ReusableRule{
-		Name:   name,
-		Import: migration,
-	})
+	newRule := config.ReusableRule{Name: name, Import: migration}
+	replaced := false
+	if force {
+		for i, r := range cfg.ReusableRules {
+			if r.Name == name {
+				cfg.ReusableRules[i] = newRule
+				replaced = true
+				break
+			}
+		}
+	}
+	if !replaced {
+		cfg.ReusableRules = append(cfg.ReusableRules, newRule)
+	}
 	b, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
