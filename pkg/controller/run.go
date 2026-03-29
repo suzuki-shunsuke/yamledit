@@ -53,15 +53,15 @@ func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *c
 	return nil
 }
 
-func loadConfigs(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir string, migrations []string) ([]*config.Config, error) {
+func loadConfigs(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir string, migrations []string) ([]*config.Ruleset, error) {
 	if len(migrations) == 0 {
-		configs, err := config.ReadConfigs(ctx, logger.Logger, ghClient, c, dir)
+		configs, err := config.ReadRulesets(ctx, logger.Logger, ghClient, c, dir)
 		if err != nil {
 			return nil, fmt.Errorf("read all configs: %w", err)
 		}
 		return configs, nil
 	}
-	configs, err := config.ReadConfigsByPaths(ctx, logger.Logger, ghClient, c, dir, migrations)
+	configs, err := config.ReadRulesetsByPaths(ctx, logger.Logger, ghClient, c, dir, migrations)
 	if err != nil {
 		return nil, fmt.Errorf("read configs by paths: %w", err)
 	}
@@ -80,7 +80,7 @@ func discoverYAMLFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
-func buildRuleActions(logger *slogutil.Logger, configs []*config.Config) ([]*ruleActions, error) {
+func buildRuleActions(logger *slogutil.Logger, configs []*config.Ruleset) ([]*ruleActions, error) {
 	var rules []*ruleActions
 	for _, cfg := range configs {
 		for _, rule := range cfg.Rules {
