@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/suzuki-shunsuke/yamledit/pkg/config/config",
+  "$ref": "#/$defs/Config",
+  "$defs": {
+    "Config": {
+      "properties": {
+        "reusable_rules": {
+          "items": {
+            "$ref": "#/$defs/ReusableRule"
+          },
+          "type": "array",
+          "description": "List of reusable rules."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "reusable_rules"
+      ]
+    },
+    "ReusableRule": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the reusable rule."
+        },
+        "import": {
+          "type": "string",
+          "description": "URL or GitHub Contents path to import the rule from."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "name",
+        "import"
+      ]
+    }
+  }
+}
