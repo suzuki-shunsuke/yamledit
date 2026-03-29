@@ -12,9 +12,25 @@ import (
 	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
 
+// ReusableRule represents a reusable rule entry in the project config.
+type ReusableRule struct {
+	Name   string `json:"name" yaml:"name"`
+	Import string `json:"import" yaml:"import"`
+}
+
 // ProjectConfig represents the structure of .yamledit/config.yaml.
 type ProjectConfig struct {
-	Aliases map[string]string `json:"aliases" yaml:"aliases"`
+	ReusableRules []ReusableRule `json:"reusable_rules" yaml:"reusable_rules"`
+}
+
+// FindReusableRule looks up a reusable rule by name and returns its import URL.
+func (c *ProjectConfig) FindReusableRule(name string) (string, bool) {
+	for _, r := range c.ReusableRules {
+		if r.Name == name {
+			return r.Import, true
+		}
+	}
+	return "", false
 }
 
 // UnmarshalProjectConfig parses YAML content into a ProjectConfig.

@@ -101,7 +101,7 @@ func TestDiscoverMigrations_skipsConfigYAML(t *testing.T) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("aliases: {}\n"), 0o644); err != nil { //nolint:gosec
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("reusable_rules: []\n"), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 	setupMigration(t, dir, "foo", `rules:

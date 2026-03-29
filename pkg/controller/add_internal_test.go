@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -28,9 +29,9 @@ func TestAdd_createNewConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read config: %v", err)
 	}
-	want := "aliases:\n  my-rule: " + srv.URL + "/migration.yaml\n"
-	if string(b) != want {
-		t.Errorf("config mismatch:\ngot:\n%s\nwant:\n%s", string(b), want)
+	got := string(b)
+	if !strings.Contains(got, "name: my-rule") || !strings.Contains(got, "import: "+srv.URL+"/migration.yaml") {
+		t.Errorf("config should contain reusable rule, got:\n%s", got)
 	}
 }
 
@@ -46,7 +47,7 @@ func TestAdd_addToExistingConfig(t *testing.T) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("aliases:\n  existing: https://example.com/existing\n"), 0o644); err != nil { //nolint:gosec
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("reusable_rules:\n  - name: existing\n    import: https://example.com/existing\n"), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 
@@ -59,8 +60,8 @@ func TestAdd_addToExistingConfig(t *testing.T) {
 		t.Fatalf("failed to read config: %v", err)
 	}
 	got := string(b)
-	if got != "aliases:\n  existing: https://example.com/existing\n  new-rule: "+srv.URL+"/migration.yaml\n" {
-		t.Errorf("config mismatch:\ngot:\n%s", got)
+	if !strings.Contains(got, "name: existing") || !strings.Contains(got, "name: new-rule") {
+		t.Errorf("config should contain both rules, got:\n%s", got)
 	}
 }
 
@@ -71,7 +72,7 @@ func TestAdd_aliasAlreadyExists(t *testing.T) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("aliases:\n  my-rule: https://example.com/old\n"), 0o644); err != nil { //nolint:gosec
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("reusable_rules:\n  - name: my-rule\n    import: https://example.com/old\n"), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 

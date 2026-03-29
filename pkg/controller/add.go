@@ -8,8 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/goccy/go-yaml/parser"
-	"github.com/suzuki-shunsuke/go-yamledit/yamledit"
+	"github.com/goccy/go-yaml"
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
 	"github.com/suzuki-shunsuke/yamledit/pkg/cache"
 	"github.com/suzuki-shunsuke/yamledit/pkg/config"
@@ -21,11 +20,11 @@ func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *c
 		return err
 	}
 	configPath := filepath.Join(dir, ".yamledit", "config.yaml")
-	content, isNew, err := readOrCreateConfig(configPath)
+	content, err := readOrCreateConfig(configPath)
 	if err != nil {
 		return err
 	}
-	if err := checkAliasUniqueness(content, alias); err != nil {
+	if err := checkNameUniqueness(content, alias); err != nil {
 		return err
 	}
 	if err := downloadMigration(ctx, logger, ghClient, c, migration); err != nil {
@@ -34,7 +33,7 @@ func Add(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *c
 	if err := os.MkdirAll(filepath.Join(dir, ".yamledit"), 0o755); err != nil { //nolint:mnd
 		return fmt.Errorf("create .yamledit directory: %w", err)
 	}
-	return writeAlias(configPath, content, isNew, alias, migration)
+	return writeReusableRule(configPath, content, alias, migration)
 }
 
 func validateAddArgs(alias, migration string) error {
@@ -48,24 +47,24 @@ func validateAddArgs(alias, migration string) error {
 	return nil
 }
 
-func readOrCreateConfig(configPath string) ([]byte, bool, error) {
+func readOrCreateConfig(configPath string) ([]byte, error) {
 	b, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []byte("aliases: {}\n"), true, nil
+			return []byte("reusable_rules: []\n"), nil
 		}
-		return nil, false, fmt.Errorf("read config file: %w", err)
+		return nil, fmt.Errorf("read config file: %w", err)
 	}
-	return b, false, nil
+	return b, nil
 }
 
-func checkAliasUniqueness(content []byte, alias string) error {
+func checkNameUniqueness(content []byte, name string) error {
 	var cfg config.ProjectConfig
 	if err := config.UnmarshalProjectConfig(content, &cfg); err != nil {
 		return fmt.Errorf("parse config file: %w", err)
 	}
-	if _, ok := cfg.Aliases[alias]; ok {
-		return fmt.Errorf("alias %q already exists in config", alias)
+	if _, ok := cfg.FindReusableRule(name); ok {
+		return fmt.Errorf("reusable rule %q already exists in config", name)
 	}
 	return nil
 }
@@ -77,22 +76,20 @@ func downloadMigration(ctx context.Context, logger *slogutil.Logger, ghClient *g
 	return nil
 }
 
-func writeAlias(configPath string, content []byte, isNew bool, alias, migration string) error {
-	file, err := parser.ParseBytes(content, parser.ParseComments)
+func writeReusableRule(configPath string, content []byte, name, migration string) error {
+	var cfg config.ProjectConfig
+	if err := config.UnmarshalProjectConfig(content, &cfg); err != nil {
+		return fmt.Errorf("parse config file: %w", err)
+	}
+	cfg.ReusableRules = append(cfg.ReusableRules, config.ReusableRule{
+		Name:   name,
+		Import: migration,
+	})
+	b, err := yaml.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("parse config YAML: %w", err)
+		return fmt.Errorf("marshal config: %w", err)
 	}
-	var act yamledit.Action
-	if isNew {
-		// For new config, set aliases as a map at root level to get block style
-		act = yamledit.MapAction("$", yamledit.SetKey("aliases", map[string]string{alias: migration}, nil))
-	} else {
-		act = yamledit.MapAction("$.aliases", yamledit.SetKey(alias, migration, nil))
-	}
-	if err := act.Run(file.Docs[0].Body); err != nil {
-		return fmt.Errorf("add alias to config: %w", err)
-	}
-	if err := os.WriteFile(configPath, []byte(file.String()), 0o644); err != nil { //nolint:gosec,mnd
+	if err := os.WriteFile(configPath, b, 0o644); err != nil { //nolint:gosec,mnd
 		return fmt.Errorf("write config file: %w", err)
 	}
 	return nil
