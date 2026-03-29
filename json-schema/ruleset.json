@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/suzuki-shunsuke/yamledit/pkg/config/config",
-  "$ref": "#/$defs/Config",
+  "$id": "https://github.com/suzuki-shunsuke/yamledit/pkg/config/ruleset",
+  "$ref": "#/$defs/Ruleset",
   "$defs": {
     "Action": {
       "properties": {
@@ -70,22 +70,6 @@
         "type"
       ]
     },
-    "Config": {
-      "properties": {
-        "rules": {
-          "items": {
-            "$ref": "#/$defs/Rule"
-          },
-          "type": "array",
-          "description": "List of migration rules. Rules are evaluated in order."
-        }
-      },
-      "additionalProperties": false,
-      "type": "object",
-      "required": [
-        "rules"
-      ]
-    },
     "InsertLocation": {
       "properties": {
         "after_key": {
@@ -134,6 +118,22 @@
       "required": [
         "path",
         "actions"
+      ]
+    },
+    "Ruleset": {
+      "properties": {
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/Rule"
+          },
+          "type": "array",
+          "description": "List of migration rules. Rules are evaluated in order."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "rules"
       ]
     }
   }

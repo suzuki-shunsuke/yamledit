@@ -15,13 +15,13 @@ import (
 
 // ReusableRule represents a reusable rule entry in the project config.
 type ReusableRule struct {
-	Name   string `json:"name" yaml:"name"`
-	Import string `json:"import" yaml:"import"`
+	Name   string `json:"name" yaml:"name" jsonschema_description:"Name of the reusable rule."`
+	Import string `json:"import" yaml:"import" jsonschema_description:"URL or GitHub Contents path to import the rule from."`
 }
 
 // Config represents the structure of .yamledit/config.yaml.
 type Config struct {
-	ReusableRules []ReusableRule `json:"reusable_rules" yaml:"reusable_rules"`
+	ReusableRules []ReusableRule `json:"reusable_rules" yaml:"reusable_rules" jsonschema_description:"List of reusable rules."`
 }
 
 // FindReusableRule looks up a reusable rule by name and returns its import URL.

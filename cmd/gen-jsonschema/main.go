@@ -9,7 +9,10 @@ import (
 )
 
 func main() {
-	if err := jsonschema.Write(&config.Ruleset{}, "json-schema/migration.json"); err != nil {
+	if err := jsonschema.Write(&config.Ruleset{}, "json-schema/ruleset.json"); err != nil {
+		log.Fatal(fmt.Errorf("create or update a JSON Schema: %w", err))
+	}
+	if err := jsonschema.Write(&config.Config{}, "json-schema/config.json"); err != nil {
 		log.Fatal(fmt.Errorf("create or update a JSON Schema: %w", err))
 	}
 }
