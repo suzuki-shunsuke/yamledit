@@ -11,7 +11,6 @@ import (
 )
 
 func TestAdd(t *testing.T) { //nolint:funlen,gocognit,cyclop
-	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(`rules: []`)) //nolint:errcheck
 	}))
@@ -23,6 +22,7 @@ func TestAdd(t *testing.T) { //nolint:funlen,gocognit,cyclop
 		alias           string
 		migration       string // "$URL" replaced with srv.URL
 		force           bool
+		global          bool
 		wantErr         bool
 		wantContains    []string // "$URL" replaced with srv.URL
 		wantNotContains []string
@@ -91,12 +91,27 @@ func TestAdd(t *testing.T) { //nolint:funlen,gocognit,cyclop
 			migration:     "$URL/migration.yaml",
 			wantContains:  []string{"name: my-rule"},
 		},
+		{
+			name:         "global flag writes to global config",
+			alias:        "my-rule",
+			migration:    "$URL/migration.yaml",
+			global:       true,
+			wantContains: []string{"name: my-rule"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			if !tt.global {
+				t.Parallel()
+			}
 			dir := t.TempDir()
 			migration := strings.ReplaceAll(tt.migration, "$URL", srv.URL)
+
+			configPath := filepath.Join(dir, ".yamledit", "config.yaml")
+			if tt.global {
+				configPath = filepath.Join(dir, "global", "config.yaml")
+				t.Setenv("YAMLEDIT_GLOBAL_CONFIG", configPath)
+			}
 
 			if tt.initialConfig != "no-dir" {
 				configDir := filepath.Join(dir, ".yamledit")
@@ -110,7 +125,7 @@ func TestAdd(t *testing.T) { //nolint:funlen,gocognit,cyclop
 				}
 			}
 
-			err := Add(context.Background(), newLogger(), nil, nil, dir, tt.alias, migration, tt.force)
+			err := Add(context.Background(), newLogger(), nil, nil, dir, tt.alias, migration, tt.force, tt.global)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -121,7 +136,7 @@ func TestAdd(t *testing.T) { //nolint:funlen,gocognit,cyclop
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			b, err := os.ReadFile(filepath.Join(dir, ".yamledit", "config.yaml"))
+			b, err := os.ReadFile(configPath)
 			if err != nil {
 				t.Fatalf("failed to read config: %v", err)
 			}

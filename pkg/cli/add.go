@@ -14,9 +14,10 @@ import (
 
 type AddArgs struct {
 	*Flags
+	Force     bool
+	Global    bool
 	Alias     string
 	Migration string
-	Force     bool
 }
 
 func NewAdd(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
@@ -35,6 +36,12 @@ func NewAdd(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
 				Aliases:     []string{"f"},
 				Usage:       "Overwrite existing entry",
 				Destination: &args.Force,
+			},
+			&cli.BoolFlag{
+				Name:        "global",
+				Aliases:     []string{"g"},
+				Usage:       "Add to global config instead of project config",
+				Destination: &args.Global,
 			},
 		},
 		Arguments: []cli.Argument{
@@ -66,5 +73,5 @@ func addAction(ctx context.Context, logger *slogutil.Logger, args *AddArgs) erro
 	}
 	ghClient := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv(), ghtknEnabled)
 	c := cache.New(args.NoCache)
-	return controller.Add(ctx, logger, ghClient, c, ".", args.Alias, args.Migration, args.Force) //nolint:wrapcheck
+	return controller.Add(ctx, logger, ghClient, c, ".", args.Alias, args.Migration, args.Force, args.Global) //nolint:wrapcheck
 }
