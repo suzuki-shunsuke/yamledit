@@ -72,6 +72,17 @@ func TestNew(t *testing.T) { //nolint:funlen
 			if string(b) != string(defaultConfig) {
 				t.Errorf("file content mismatch:\ngot:\n%s\nwant:\n%s", string(b), string(defaultConfig))
 			}
+			// Verify test files
+			for _, testFile := range []string{"normal.yaml", "normal_result.yaml"} {
+				tp := filepath.Join(dir, ".yamledit", tt.input+"_test", testFile)
+				tb, err := os.ReadFile(tp)
+				if err != nil {
+					t.Fatalf("failed to read test file %s: %v", testFile, err)
+				}
+				if string(tb) != "age: 10\n" {
+					t.Errorf("test file %s content mismatch:\ngot:\n%s\nwant:\n%s", testFile, string(tb), "age: 10\n")
+				}
+			}
 		})
 	}
 }
@@ -85,22 +96,62 @@ func TestNew_idempotent(t *testing.T) {
 		t.Fatalf("first call: %v", err)
 	}
 
-	p := filepath.Join(dir, ".yamledit", name+".yaml")
-	info1, err := os.Stat(p)
-	if err != nil {
-		t.Fatalf("stat after first call: %v", err)
+	files := []string{
+		filepath.Join(dir, ".yamledit", name+".yaml"),
+		filepath.Join(dir, ".yamledit", name+"_test", "normal.yaml"),
+		filepath.Join(dir, ".yamledit", name+"_test", "normal_result.yaml"),
+	}
+	infos := make([]os.FileInfo, len(files))
+	for i, f := range files {
+		info, err := os.Stat(f)
+		if err != nil {
+			t.Fatalf("stat %s after first call: %v", f, err)
+		}
+		infos[i] = info
 	}
 
 	if err := New(dir, name); err != nil {
 		t.Fatalf("second call: %v", err)
 	}
 
-	info2, err := os.Stat(p)
-	if err != nil {
-		t.Fatalf("stat after second call: %v", err)
+	for i, f := range files {
+		info, err := os.Stat(f)
+		if err != nil {
+			t.Fatalf("stat %s after second call: %v", f, err)
+		}
+		if infos[i].ModTime() != info.ModTime() {
+			t.Errorf("%s was modified on second call, expected idempotent behavior", f)
+		}
+	}
+}
+
+func TestNew_migrationExistsButTestFilesMissing(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	name := "my-migration"
+
+	// Create only the migration file
+	configDir := filepath.Join(dir, ".yamledit")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, name+".yaml"), defaultConfig, 0o644); err != nil { //nolint:gosec
+		t.Fatal(err)
 	}
 
-	if info1.ModTime() != info2.ModTime() {
-		t.Error("file was modified on second call, expected idempotent behavior")
+	// Run New — should create test files even though migration exists
+	if err := New(dir, name); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, testFile := range []string{"normal.yaml", "normal_result.yaml"} {
+		tp := filepath.Join(configDir, name+"_test", testFile)
+		b, err := os.ReadFile(tp)
+		if err != nil {
+			t.Fatalf("failed to read test file %s: %v", testFile, err)
+		}
+		if string(b) != "age: 10\n" {
+			t.Errorf("test file %s content mismatch:\ngot:\n%s\nwant:\n%s", testFile, string(b), "age: 10\n")
+		}
 	}
 }

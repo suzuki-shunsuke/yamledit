@@ -4,6 +4,12 @@
 yamledit test [<migration> ...]
 ```
 
+e.g.
+
+```sh
+yamledit test goreleaser-v2
+```
+
 Tests whether YAML files are modified as expected by migration files.
 This command fails if any test files are not modified expectedly.
 
@@ -27,28 +33,3 @@ If test files aren't modified expectedly, diff are outputted.
 
 Unlike the `run` command, the `@` prefix is not required.
 Also, `<migration>` does not support remote migration files such as URLs or GitHub Contents.
-
-test directories and files are created by `yamledit new -test` command.
-
-```sh
-: Create test files
-yamledit new -test <migration> <test>
-```
-
-e.g.
-
-```sh
-yamledit new -test goreleaser-v2 standard
-```
-
-```
-.yamledit/
-  goreleaser-v2.yaml
-  goreleaser-v2_test/ # directory created
-    standard.yaml # created
-    standard_result.yaml # created
-```
-
-```sh
-yamledit test goreleaser-v2
-```

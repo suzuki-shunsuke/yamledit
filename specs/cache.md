@@ -70,4 +70,8 @@ The expiration period varies depending on the source of the migration file.
 yamledit run -no-cache
 ```
 
+```sh
+yamledit test -no-cache
+```
+
 When `-no-cache` is specified, the cache is ignored, the migration file is fetched from the remote source, and the cache is updated.
