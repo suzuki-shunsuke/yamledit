@@ -94,6 +94,35 @@ func TestTest_noTestDirectory(t *testing.T) {
 	}
 }
 
+func TestDiscoverMigrations_skipsConfigYAML(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, ".yamledit")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("aliases: {}\n"), 0o644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+	setupMigration(t, dir, "foo", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	names, err := discoverMigrations(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(names) != 1 {
+		t.Fatalf("expected 1 migration (config.yaml should be skipped), got %d: %v", len(names), names)
+	}
+	if names[0] != "foo" {
+		t.Errorf("expected migration name 'foo', got %q", names[0])
+	}
+}
+
 func TestTest_specificMigration(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
