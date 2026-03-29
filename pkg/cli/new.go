@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
 	"github.com/suzuki-shunsuke/yamledit/pkg/config"
@@ -49,7 +50,7 @@ func runAction(_ context.Context, logger *slogutil.Logger, args *RunArgs) error 
 		return errors.New("migration name is required")
 	}
 
-	if err := config.New(".", args.Name); err != nil {
+	if err := config.New(os.Stderr, ".", args.Name); err != nil {
 		return fmt.Errorf("initialize config: %w", err)
 	}
 	return nil
