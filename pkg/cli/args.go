@@ -15,12 +15,19 @@ func parseArgs(args []string) (migrations []string, yamlFiles []string, err erro
 			continue
 		}
 		m := arg[1:]
-		if yamlSuffixPattern.MatchString(m) {
-			migrations = append(migrations, m)
-			continue
-		}
-		if strings.Contains(m, "/") {
+		switch {
+		case strings.HasPrefix(m, "http://") || strings.HasPrefix(m, "https://"):
+			// URL import
+		case strings.HasPrefix(m, "github.com/"):
+			// GitHub Contents API import
+		case strings.HasPrefix(m, "./"):
+			// Local path escape
+		case yamlSuffixPattern.MatchString(m):
+			// File path with .yaml/.yml suffix
+		case strings.Contains(m, "/"):
 			return nil, nil, fmt.Errorf("invalid migration argument %q: migration name must not contain /", arg)
+		default:
+			// Migration name
 		}
 		migrations = append(migrations, m)
 	}

@@ -190,19 +190,43 @@ func ReadConfigs(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, 
 func ReadConfigsByPaths(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir string, paths []string) ([]*Config, error) {
 	configs := make([]*Config, 0, len(paths))
 	for _, p := range paths {
-		if !filepath.IsAbs(p) && !yamlSuffixPattern.MatchString(p) {
-			p = filepath.Join(dir, ".yamledit", p+".yaml")
-		}
-		cfg, err := ReadConfig(p)
+		cfg, err := readConfigByPath(ctx, logger, ghClient, c, dir, p)
 		if err != nil {
-			return nil, fmt.Errorf("read migration file %s: %w", p, err)
-		}
-		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
-			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
+			return nil, err
 		}
 		configs = append(configs, cfg)
 	}
 	return configs, nil
+}
+
+func isRemoteImport(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") || strings.HasPrefix(s, "github.com/")
+}
+
+func readConfigByPath(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir, p string) (*Config, error) {
+	if isRemoteImport(p) {
+		cfg, err := resolveImport(ctx, logger, ghClient, c, p)
+		if err != nil {
+			return nil, fmt.Errorf("fetch remote migration %s: %w", p, err)
+		}
+		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
+			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
+		}
+		return cfg, nil
+	}
+	// Local path: strip ./ prefix if present
+	p = strings.TrimPrefix(p, "./")
+	if !filepath.IsAbs(p) && !yamlSuffixPattern.MatchString(p) {
+		p = filepath.Join(dir, ".yamledit", p+".yaml")
+	}
+	cfg, err := ReadConfig(p)
+	if err != nil {
+		return nil, fmt.Errorf("read migration file %s: %w", p, err)
+	}
+	if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
+		return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
+	}
+	return cfg, nil
 }
 
 var yamlSuffixPattern = regexp.MustCompile(`\.ya?ml$`)

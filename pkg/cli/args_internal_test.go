@@ -41,6 +41,36 @@ func TestParseArgs(t *testing.T) { //nolint:funlen
 			wantErr: true,
 		},
 		{
+			name:           "https URL",
+			args:           []string{"@https://example.com/migration.yaml"},
+			wantMigrations: []string{"https://example.com/migration.yaml"},
+		},
+		{
+			name:           "http URL",
+			args:           []string{"@http://example.com/migration.yaml"},
+			wantMigrations: []string{"http://example.com/migration.yaml"},
+		},
+		{
+			name:           "GitHub with ref",
+			args:           []string{"@github.com/owner/repo/path.yaml:v1.0.0"},
+			wantMigrations: []string{"github.com/owner/repo/path.yaml:v1.0.0"},
+		},
+		{
+			name:           "GitHub without ref",
+			args:           []string{"@github.com/owner/repo/path.yaml"},
+			wantMigrations: []string{"github.com/owner/repo/path.yaml"},
+		},
+		{
+			name:           "local path escape with ./",
+			args:           []string{"@./github.com/local/file.yaml"},
+			wantMigrations: []string{"./github.com/local/file.yaml"},
+		},
+		{
+			name:           "local path escape generic",
+			args:           []string{"@./some/path.yaml"},
+			wantMigrations: []string{"./some/path.yaml"},
+		},
+		{
 			name:          "yaml file",
 			args:          []string{"input.yaml"},
 			wantYAMLFiles: []string{"input.yaml"},

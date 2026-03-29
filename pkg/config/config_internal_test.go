@@ -418,6 +418,71 @@ func TestResolveImports(t *testing.T) {
 	}
 }
 
+func TestReadConfigsByPaths_remoteURL(t *testing.T) {
+	t.Parallel()
+	remoteConfig := `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(remoteConfig)) //nolint:errcheck
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	configs, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{srv.URL + "/migration.yaml"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(configs) != 1 {
+		t.Fatalf("expected 1 config, got %d", len(configs))
+	}
+	want := []*Rule{
+		{
+			Path: "$",
+			Actions: []*Action{
+				{Type: "remove_keys", Keys: []string{"age"}},
+			},
+		},
+	}
+	if diff := cmp.Diff(want, configs[0].Rules); diff != "" {
+		t.Errorf("ReadConfigsByPaths() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestReadConfigsByPaths_localPathEscape(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	setupMigration(t, dir, "test", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	configs, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"./" + filepath.Join(dir, ".yamledit", "test.yaml")})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(configs) != 1 {
+		t.Fatalf("expected 1 config, got %d", len(configs))
+	}
+	want := []*Rule{
+		{
+			Path: "$",
+			Actions: []*Action{
+				{Type: "remove_keys", Keys: []string{"age"}},
+			},
+		},
+	}
+	if diff := cmp.Diff(want, configs[0].Rules); diff != "" {
+		t.Errorf("ReadConfigsByPaths() mismatch (-want +got):\n%s", diff)
+	}
+}
+
 func TestResolveImports_noImport(t *testing.T) {
 	t.Parallel()
 	cfg := &Config{
