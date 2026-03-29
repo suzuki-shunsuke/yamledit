@@ -78,6 +78,46 @@ func (c *Cache) PutGitHub(owner, repo, path, ref string, content []byte) error {
 	return c.put(dir, content)
 }
 
+const topicExpirationDays = 1
+
+func (c *Cache) GetTopicSearch(_ *slog.Logger) ([]byte, bool) {
+	if c == nil || c.NoCache {
+		return nil, false
+	}
+	p := filepath.Join(c.Dir, "topics", "yamledit-rule", "result.json")
+	info, err := os.Stat(p)
+	if err != nil {
+		return nil, false
+	}
+	if time.Since(info.ModTime()) > topicExpirationDays*24*time.Hour {
+		return nil, false
+	}
+	content, err := os.ReadFile(p)
+	if err != nil {
+		return nil, false
+	}
+	return content, true
+}
+
+func (c *Cache) PutTopicSearch(content []byte) error {
+	if c == nil {
+		return nil
+	}
+	dir := filepath.Join(c.Dir, "topics", "yamledit-rule")
+	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:mnd
+		return fmt.Errorf("create topic cache directory: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "result.json"), content, 0o644); err != nil { //nolint:gosec,mnd
+		return fmt.Errorf("write result.json: %w", err)
+	}
+	return nil
+}
+
+var (
+	semverPattern = regexp.MustCompile(`^v?\d+\.\d+\.\d+$`)
+	shaPattern    = regexp.MustCompile(`^[0-9a-f]{40}$`)
+)
+
 func (c *Cache) urlDir(url string) string {
 	encoded := base64.URLEncoding.EncodeToString([]byte(url))
 	return filepath.Join(c.Dir, "remotes", "url", encoded)
@@ -120,11 +160,6 @@ func (c *Cache) put(dir string, content []byte) error {
 	}
 	return nil
 }
-
-var (
-	semverPattern = regexp.MustCompile(`^v?\d+\.\d+\.\d+$`)
-	shaPattern    = regexp.MustCompile(`^[0-9a-f]{40}$`)
-)
 
 func isExpired(modTime time.Time, ref string) bool {
 	if ref != "" {
