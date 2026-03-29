@@ -8,7 +8,7 @@ import (
 	"regexp"
 )
 
-//go:embed init.yaml
+//go:embed new.yaml
 var defaultConfig []byte
 
 const (
