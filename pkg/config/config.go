@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -187,6 +188,21 @@ func ReadConfigs(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, 
 		}
 		configs = append(configs, cfg)
 	}
+	// Also load aliases from project config
+	projCfg, err := ReadProjectConfig(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read project config: %w", err)
+	}
+	for name, target := range projCfg.Aliases {
+		cfg, err := resolveImport(ctx, logger, ghClient, c, target)
+		if err != nil {
+			return nil, fmt.Errorf("resolve alias %s (%s): %w", name, target, err)
+		}
+		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
+			return nil, fmt.Errorf("resolve imports in alias %s: %w", name, err)
+		}
+		configs = append(configs, cfg)
+	}
 	return configs, nil
 }
 
@@ -218,18 +234,42 @@ func readConfigByPath(ctx context.Context, logger *slog.Logger, ghClient *gh.Cli
 		return cfg, nil
 	}
 	// Local path: strip ./ prefix if present
+	origName := p
 	p = strings.TrimPrefix(p, "./")
-	if !filepath.IsAbs(p) && !yamlSuffixPattern.MatchString(p) {
+	isMigrationName := !filepath.IsAbs(p) && !yamlSuffixPattern.MatchString(p)
+	if isMigrationName {
 		p = filepath.Join(dir, ".yamledit", p+".yaml")
 	}
 	cfg, err := ReadConfig(p)
 	if err != nil {
+		if isMigrationName && errors.Is(err, os.ErrNotExist) {
+			// Fallback to alias in project config
+			return resolveAlias(ctx, logger, ghClient, c, dir, origName)
+		}
 		return nil, fmt.Errorf("read migration file %s: %w", p, err)
 	}
 	if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
 		return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
 	}
 	return cfg, nil
+}
+
+func resolveAlias(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir, name string) (*Config, error) {
+	projCfg, err := ReadProjectConfig(dir)
+	if err != nil {
+		return nil, fmt.Errorf("read project config: %w", err)
+	}
+	if target, ok := projCfg.Aliases[name]; ok {
+		cfg, err := resolveImport(ctx, logger, ghClient, c, target)
+		if err != nil {
+			return nil, fmt.Errorf("resolve alias %s (%s): %w", name, target, err)
+		}
+		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
+			return nil, fmt.Errorf("resolve imports in alias %s: %w", name, err)
+		}
+		return cfg, nil
+	}
+	return nil, fmt.Errorf("migration %q not found in .yamledit/ or aliases", name)
 }
 
 var yamlSuffixPattern = regexp.MustCompile(`\.ya?ml$`)

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/goccy/go-yaml"
 	"github.com/suzuki-shunsuke/yamledit/pkg/cache"
@@ -21,6 +23,24 @@ func UnmarshalProjectConfig(b []byte, cfg *ProjectConfig) error {
 		return fmt.Errorf("unmarshal project config: %w", err)
 	}
 	return nil
+}
+
+// ReadProjectConfig reads .yamledit/config.yaml and returns the ProjectConfig.
+// Returns an empty ProjectConfig if the file does not exist.
+func ReadProjectConfig(dir string) (*ProjectConfig, error) {
+	p := filepath.Join(dir, ".yamledit", "config.yaml")
+	b, err := os.ReadFile(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &ProjectConfig{}, nil
+		}
+		return nil, fmt.Errorf("read project config: %w", err)
+	}
+	var cfg ProjectConfig
+	if err := UnmarshalProjectConfig(b, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }
 
 // DownloadAndCache downloads a remote migration and caches it.
