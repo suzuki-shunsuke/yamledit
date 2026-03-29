@@ -2,7 +2,6 @@ package cache
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -19,10 +18,6 @@ const expirationDays = 3
 type Cache struct {
 	Dir     string
 	NoCache bool
-}
-
-type Metadata struct {
-	LastUpdated time.Time `json:"last_updated"`
 }
 
 func New(noCache bool) *Cache {
@@ -95,20 +90,14 @@ func (c *Cache) githubDir(owner, repo, path, ref string) string {
 }
 
 func (c *Cache) get(logger *slog.Logger, dir, ref string) ([]byte, bool) {
-	metaPath := filepath.Join(dir, "metadata.json")
-	metaBytes, err := os.ReadFile(metaPath)
+	migrationPath := filepath.Join(dir, "migration.yaml")
+	info, err := os.Stat(migrationPath)
 	if err != nil {
 		return nil, false
 	}
-	var meta Metadata
-	if err := json.Unmarshal(metaBytes, &meta); err != nil {
-		logger.Debug("parse cached metadata.json", "path", metaPath, "error", err)
+	if isExpired(info.ModTime(), ref) {
 		return nil, false
 	}
-	if isExpired(meta, ref) {
-		return nil, false
-	}
-	migrationPath := filepath.Join(dir, "migration.yaml")
 	content, err := os.ReadFile(migrationPath)
 	if err != nil {
 		return nil, false
@@ -129,14 +118,6 @@ func (c *Cache) put(dir string, content []byte) error {
 	if err := os.WriteFile(filepath.Join(dir, "migration.yaml"), content, 0o644); err != nil { //nolint:gosec,mnd
 		return fmt.Errorf("write migration.yaml: %w", err)
 	}
-	meta := Metadata{LastUpdated: time.Now()}
-	metaBytes, err := json.Marshal(meta)
-	if err != nil {
-		return fmt.Errorf("marshal metadata: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "metadata.json"), metaBytes, 0o644); err != nil { //nolint:gosec,mnd
-		return fmt.Errorf("write metadata.json: %w", err)
-	}
 	return nil
 }
 
@@ -145,11 +126,11 @@ var (
 	shaPattern    = regexp.MustCompile(`^[0-9a-f]{40}$`)
 )
 
-func isExpired(meta Metadata, ref string) bool {
+func isExpired(modTime time.Time, ref string) bool {
 	if ref != "" {
 		if semverPattern.MatchString(ref) || shaPattern.MatchString(ref) {
 			return false
 		}
 	}
-	return time.Since(meta.LastUpdated) > expirationDays*24*time.Hour
+	return time.Since(modTime) > expirationDays*24*time.Hour
 }

@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"encoding/json"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -102,7 +101,7 @@ func TestExpiration_Semver(t *testing.T) {
 	}
 
 	// Backdate metadata to 30 days ago
-	backdateMetadata(t, c.githubDir("o", "r", "p", "v1.2.3"), 30*24*time.Hour)
+	backdateCache(t, c.githubDir("o", "r", "p", "v1.2.3"), 30*24*time.Hour)
 
 	// Semver should never expire
 	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", "v1.2.3"); !ok {
@@ -121,7 +120,7 @@ func TestExpiration_SHA(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	backdateMetadata(t, c.githubDir("o", "r", "p", sha), 30*24*time.Hour)
+	backdateCache(t, c.githubDir("o", "r", "p", sha), 30*24*time.Hour)
 
 	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", sha); !ok {
 		t.Fatal("SHA ref should not expire")
@@ -139,13 +138,13 @@ func TestExpiration_Branch(t *testing.T) {
 	}
 
 	// Within 3 days: should hit
-	backdateMetadata(t, c.githubDir("o", "r", "p", "main"), 2*24*time.Hour)
+	backdateCache(t, c.githubDir("o", "r", "p", "main"), 2*24*time.Hour)
 	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", "main"); !ok {
 		t.Fatal("expected cache hit within 3 days")
 	}
 
 	// After 3 days: should miss
-	backdateMetadata(t, c.githubDir("o", "r", "p", "main"), 4*24*time.Hour)
+	backdateCache(t, c.githubDir("o", "r", "p", "main"), 4*24*time.Hour)
 	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", "main"); ok {
 		t.Fatal("expected cache miss after 3 days")
 	}
@@ -163,30 +162,9 @@ func TestExpiration_URL(t *testing.T) {
 	}
 
 	// After 3 days: should miss
-	backdateMetadata(t, c.urlDir(url), 4*24*time.Hour)
+	backdateCache(t, c.urlDir(url), 4*24*time.Hour)
 	if _, ok := c.GetURL(slog.Default(), url); ok {
 		t.Fatal("expected cache miss after 3 days for URL")
-	}
-}
-
-func TestCorruptedMetadata(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	c := &Cache{Dir: dir}
-
-	content := []byte("rules: []\n")
-	if err := c.PutURL("https://example.com/a.yaml", content); err != nil {
-		t.Fatal(err)
-	}
-
-	// Corrupt metadata.json
-	metaPath := filepath.Join(c.urlDir("https://example.com/a.yaml"), "metadata.json")
-	if err := os.WriteFile(metaPath, []byte("not json"), 0o644); err != nil { //nolint:gosec
-		t.Fatal(err)
-	}
-
-	if _, ok := c.GetURL(slog.Default(), "https://example.com/a.yaml"); ok {
-		t.Fatal("expected cache miss with corrupted metadata")
 	}
 }
 
@@ -251,15 +229,11 @@ func TestNilCache(t *testing.T) {
 	}
 }
 
-func backdateMetadata(t *testing.T, dir string, age time.Duration) {
+func backdateCache(t *testing.T, dir string, age time.Duration) {
 	t.Helper()
-	metaPath := filepath.Join(dir, "metadata.json")
-	meta := Metadata{LastUpdated: time.Now().Add(-age)}
-	b, err := json.Marshal(meta)
-	if err != nil {
-		t.Fatalf("marshal metadata: %v", err)
-	}
-	if err := os.WriteFile(metaPath, b, 0o644); err != nil { //nolint:gosec
-		t.Fatalf("write metadata: %v", err)
+	migrationPath := filepath.Join(dir, "migration.yaml")
+	past := time.Now().Add(-age)
+	if err := os.Chtimes(migrationPath, past, past); err != nil {
+		t.Fatalf("chtimes migration.yaml: %v", err)
 	}
 }
