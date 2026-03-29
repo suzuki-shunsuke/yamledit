@@ -188,27 +188,12 @@ func ReadConfigs(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, 
 		}
 		configs = append(configs, cfg)
 	}
-	// Also load reusable rules from project and global configs
-	reusableConfigs, err := loadReusableRuleConfigs(ctx, logger, ghClient, c, dir)
-	if err != nil {
-		return nil, err
-	}
-	configs = append(configs, reusableConfigs...)
-	return configs, nil
-}
-
-func loadReusableRuleConfigs(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir string) ([]*Config, error) {
+	// Also load reusable rules from project config (global config is not included in default run)
 	projCfg, err := ReadProjectConfig(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read project config: %w", err)
 	}
-	globalCfg, err := ReadGlobalConfig()
-	if err != nil {
-		return nil, fmt.Errorf("read global config: %w", err)
-	}
-	allRules := append(projCfg.ReusableRules, globalCfg.ReusableRules...) //nolint:gocritic
-	var configs []*Config
-	for _, rule := range allRules {
+	for _, rule := range projCfg.ReusableRules {
 		cfg, err := resolveImport(ctx, logger, ghClient, c, rule.Import)
 		if err != nil {
 			return nil, fmt.Errorf("resolve reusable rule %s (%s): %w", rule.Name, rule.Import, err)
