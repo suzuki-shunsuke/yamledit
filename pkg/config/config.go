@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -48,18 +49,18 @@ type InsertLocation struct {
 	First     bool   `json:"first,omitempty" yaml:"first" jsonschema_description:"Insert at the beginning"`
 }
 
-func ResolveImports(ctx context.Context, ghClient *gh.Client, c *cache.Cache, cfg *Config) error {
+func ResolveImports(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, cfg *Config) error {
 	var resolved []*Rule
 	for _, rule := range cfg.Rules {
 		if rule.Import == "" {
 			resolved = append(resolved, rule)
 			continue
 		}
-		imported, err := resolveImport(ctx, ghClient, c, rule.Import)
+		imported, err := resolveImport(ctx, logger, ghClient, c, rule.Import)
 		if err != nil {
 			return fmt.Errorf("import %s: %w", rule.Import, err)
 		}
-		if err := ResolveImports(ctx, ghClient, c, imported); err != nil {
+		if err := ResolveImports(ctx, logger, ghClient, c, imported); err != nil {
 			return err
 		}
 		resolved = append(resolved, imported.Rules...)
@@ -68,15 +69,15 @@ func ResolveImports(ctx context.Context, ghClient *gh.Client, c *cache.Cache, cf
 	return nil
 }
 
-func resolveImport(ctx context.Context, ghClient *gh.Client, c *cache.Cache, s string) (*Config, error) {
+func resolveImport(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, s string) (*Config, error) {
 	if owner, repo, path, ref, ok := parseGitHubImport(s); ok {
-		return resolveGitHubImport(ctx, ghClient, c, owner, repo, path, ref)
+		return resolveGitHubImport(ctx, logger, ghClient, c, owner, repo, path, ref)
 	}
-	return resolveURLImport(ctx, c, s)
+	return resolveURLImport(ctx, logger, c, s)
 }
 
-func resolveGitHubImport(ctx context.Context, ghClient *gh.Client, c *cache.Cache, owner, repo, path, ref string) (*Config, error) {
-	if b, ok := c.GetGitHub(owner, repo, path, ref); ok {
+func resolveGitHubImport(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, owner, repo, path, ref string) (*Config, error) {
+	if b, ok := c.GetGitHub(logger, owner, repo, path, ref); ok {
 		var cfg Config
 		if err := yaml.Unmarshal(b, &cfg); err != nil {
 			return nil, fmt.Errorf("unmarshal cached YAML: %w", err)
@@ -97,8 +98,8 @@ func resolveGitHubImport(ctx context.Context, ghClient *gh.Client, c *cache.Cach
 	return &cfg, nil
 }
 
-func resolveURLImport(ctx context.Context, c *cache.Cache, url string) (*Config, error) {
-	if b, ok := c.GetURL(url); ok {
+func resolveURLImport(ctx context.Context, logger *slog.Logger, c *cache.Cache, url string) (*Config, error) {
+	if b, ok := c.GetURL(logger, url); ok {
 		var cfg Config
 		if err := yaml.Unmarshal(b, &cfg); err != nil {
 			return nil, fmt.Errorf("unmarshal cached YAML: %w", err)
@@ -166,7 +167,7 @@ func fetchURLContent(ctx context.Context, url string) ([]byte, error) {
 	return b, nil
 }
 
-func ReadConfigs(ctx context.Context, ghClient *gh.Client, c *cache.Cache, dir string) ([]*Config, error) {
+func ReadConfigs(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir string) ([]*Config, error) {
 	pattern := filepath.Join(dir, ".yamledit", "*.yaml")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
@@ -178,7 +179,7 @@ func ReadConfigs(ctx context.Context, ghClient *gh.Client, c *cache.Cache, dir s
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)
 		}
-		if err := ResolveImports(ctx, ghClient, c, cfg); err != nil {
+		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
 			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
 		}
 		configs = append(configs, cfg)
@@ -186,7 +187,7 @@ func ReadConfigs(ctx context.Context, ghClient *gh.Client, c *cache.Cache, dir s
 	return configs, nil
 }
 
-func ReadConfigsByPaths(ctx context.Context, ghClient *gh.Client, c *cache.Cache, dir string, paths []string) ([]*Config, error) {
+func ReadConfigsByPaths(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir string, paths []string) ([]*Config, error) {
 	configs := make([]*Config, 0, len(paths))
 	for _, p := range paths {
 		if !filepath.IsAbs(p) && !yamlSuffixPattern.MatchString(p) {
@@ -196,7 +197,7 @@ func ReadConfigsByPaths(ctx context.Context, ghClient *gh.Client, c *cache.Cache
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)
 		}
-		if err := ResolveImports(ctx, ghClient, c, cfg); err != nil {
+		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
 			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
 		}
 		configs = append(configs, cfg)

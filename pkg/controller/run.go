@@ -22,7 +22,7 @@ type ruleActions struct {
 }
 
 func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir string, migrations, yamlFiles []string) error {
-	configs, err := loadConfigs(ctx, ghClient, c, dir, migrations)
+	configs, err := loadConfigs(ctx, logger, ghClient, c, dir, migrations)
 	if err != nil {
 		return fmt.Errorf("read migration configs: %w", err)
 	}
@@ -53,15 +53,15 @@ func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *c
 	return nil
 }
 
-func loadConfigs(ctx context.Context, ghClient *gh.Client, c *cache.Cache, dir string, migrations []string) ([]*config.Config, error) {
+func loadConfigs(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir string, migrations []string) ([]*config.Config, error) {
 	if len(migrations) == 0 {
-		configs, err := config.ReadConfigs(ctx, ghClient, c, dir)
+		configs, err := config.ReadConfigs(ctx, logger.Logger, ghClient, c, dir)
 		if err != nil {
 			return nil, fmt.Errorf("read all configs: %w", err)
 		}
 		return configs, nil
 	}
-	configs, err := config.ReadConfigsByPaths(ctx, ghClient, c, dir, migrations)
+	configs, err := config.ReadConfigsByPaths(ctx, logger.Logger, ghClient, c, dir, migrations)
 	if err != nil {
 		return nil, fmt.Errorf("read configs by paths: %w", err)
 	}

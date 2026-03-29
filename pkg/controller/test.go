@@ -59,7 +59,7 @@ func testMigration(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Cl
 	if err != nil {
 		return false, fmt.Errorf("read config: %w", err)
 	}
-	if err := config.ResolveImports(ctx, ghClient, c, cfg); err != nil {
+	if err := config.ResolveImports(ctx, logger.Logger, ghClient, c, cfg); err != nil {
 		return false, fmt.Errorf("resolve imports: %w", err)
 	}
 	actions, err := buildAllActions(logger, cfg)

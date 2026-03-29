@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -50,12 +51,12 @@ func resolveDir() string {
 	return filepath.Join(home, ".cache", "yamledit")
 }
 
-func (c *Cache) GetURL(url string) ([]byte, bool) {
+func (c *Cache) GetURL(logger *slog.Logger, url string) ([]byte, bool) {
 	if c == nil || c.NoCache {
 		return nil, false
 	}
 	dir := c.urlDir(url)
-	return c.get(dir, "")
+	return c.get(logger, dir, "")
 }
 
 func (c *Cache) PutURL(url string, content []byte) error {
@@ -66,12 +67,12 @@ func (c *Cache) PutURL(url string, content []byte) error {
 	return c.put(dir, content)
 }
 
-func (c *Cache) GetGitHub(owner, repo, path, ref string) ([]byte, bool) {
+func (c *Cache) GetGitHub(logger *slog.Logger, owner, repo, path, ref string) ([]byte, bool) {
 	if c == nil || c.NoCache {
 		return nil, false
 	}
 	dir := c.githubDir(owner, repo, path, ref)
-	return c.get(dir, ref)
+	return c.get(logger, dir, ref)
 }
 
 func (c *Cache) PutGitHub(owner, repo, path, ref string, content []byte) error {
@@ -93,7 +94,7 @@ func (c *Cache) githubDir(owner, repo, path, ref string) string {
 	return filepath.Join(c.Dir, "remotes", "github_content", "github.com", owner, repo, encodedRef, encodedPath)
 }
 
-func (c *Cache) get(dir, ref string) ([]byte, bool) {
+func (c *Cache) get(logger *slog.Logger, dir, ref string) ([]byte, bool) {
 	metaPath := filepath.Join(dir, "metadata.json")
 	metaBytes, err := os.ReadFile(metaPath)
 	if err != nil {
@@ -101,18 +102,21 @@ func (c *Cache) get(dir, ref string) ([]byte, bool) {
 	}
 	var meta Metadata
 	if err := json.Unmarshal(metaBytes, &meta); err != nil {
+		logger.Debug("failed to parse cached metadata.json", "path", metaPath, "error", err)
 		return nil, false
 	}
 	if isExpired(meta, ref) {
 		return nil, false
 	}
-	content, err := os.ReadFile(filepath.Join(dir, "migration.yaml"))
+	migrationPath := filepath.Join(dir, "migration.yaml")
+	content, err := os.ReadFile(migrationPath)
 	if err != nil {
 		return nil, false
 	}
 	// Validate that content is valid YAML.
 	var v any
 	if err := yaml.Unmarshal(content, &v); err != nil {
+		logger.Debug("failed to parse cached migration.yaml", "path", migrationPath, "error", err)
 		return nil, false
 	}
 	return content, true

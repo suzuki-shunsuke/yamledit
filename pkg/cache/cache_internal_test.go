@@ -2,6 +2,7 @@ package cache
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -53,7 +54,7 @@ func TestGetPutURL(t *testing.T) {
 	content := []byte("rules: []\n")
 
 	// Cache miss initially
-	if _, ok := c.GetURL(url); ok {
+	if _, ok := c.GetURL(slog.Default(), url); ok {
 		t.Fatal("expected cache miss")
 	}
 
@@ -61,7 +62,7 @@ func TestGetPutURL(t *testing.T) {
 	if err := c.PutURL(url, content); err != nil {
 		t.Fatalf("PutURL: %v", err)
 	}
-	got, ok := c.GetURL(url)
+	got, ok := c.GetURL(slog.Default(), url)
 	if !ok {
 		t.Fatal("expected cache hit")
 	}
@@ -81,7 +82,7 @@ func TestGetPutGitHub(t *testing.T) {
 	if err := c.PutGitHub("owner", "repo", "path/to/file.yaml", "v1.0.0", content); err != nil {
 		t.Fatalf("PutGitHub: %v", err)
 	}
-	got, ok := c.GetGitHub("owner", "repo", "path/to/file.yaml", "v1.0.0")
+	got, ok := c.GetGitHub(slog.Default(), "owner", "repo", "path/to/file.yaml", "v1.0.0")
 	if !ok {
 		t.Fatal("expected cache hit")
 	}
@@ -104,7 +105,7 @@ func TestExpiration_Semver(t *testing.T) {
 	backdateMetadata(t, c.githubDir("o", "r", "p", "v1.2.3"), 30*24*time.Hour)
 
 	// Semver should never expire
-	if _, ok := c.GetGitHub("o", "r", "p", "v1.2.3"); !ok {
+	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", "v1.2.3"); !ok {
 		t.Fatal("semver ref should not expire")
 	}
 }
@@ -122,7 +123,7 @@ func TestExpiration_SHA(t *testing.T) {
 
 	backdateMetadata(t, c.githubDir("o", "r", "p", sha), 30*24*time.Hour)
 
-	if _, ok := c.GetGitHub("o", "r", "p", sha); !ok {
+	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", sha); !ok {
 		t.Fatal("SHA ref should not expire")
 	}
 }
@@ -139,13 +140,13 @@ func TestExpiration_Branch(t *testing.T) {
 
 	// Within 3 days: should hit
 	backdateMetadata(t, c.githubDir("o", "r", "p", "main"), 2*24*time.Hour)
-	if _, ok := c.GetGitHub("o", "r", "p", "main"); !ok {
+	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", "main"); !ok {
 		t.Fatal("expected cache hit within 3 days")
 	}
 
 	// After 3 days: should miss
 	backdateMetadata(t, c.githubDir("o", "r", "p", "main"), 4*24*time.Hour)
-	if _, ok := c.GetGitHub("o", "r", "p", "main"); ok {
+	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", "main"); ok {
 		t.Fatal("expected cache miss after 3 days")
 	}
 }
@@ -163,7 +164,7 @@ func TestExpiration_URL(t *testing.T) {
 
 	// After 3 days: should miss
 	backdateMetadata(t, c.urlDir(url), 4*24*time.Hour)
-	if _, ok := c.GetURL(url); ok {
+	if _, ok := c.GetURL(slog.Default(), url); ok {
 		t.Fatal("expected cache miss after 3 days for URL")
 	}
 }
@@ -184,7 +185,7 @@ func TestCorruptedMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, ok := c.GetURL("https://example.com/a.yaml"); ok {
+	if _, ok := c.GetURL(slog.Default(), "https://example.com/a.yaml"); ok {
 		t.Fatal("expected cache miss with corrupted metadata")
 	}
 }
@@ -205,7 +206,7 @@ func TestCorruptedMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, ok := c.GetURL("https://example.com/b.yaml"); ok {
+	if _, ok := c.GetURL(slog.Default(), "https://example.com/b.yaml"); ok {
 		t.Fatal("expected cache miss with corrupted migration")
 	}
 }
@@ -222,13 +223,13 @@ func TestNoCache(t *testing.T) {
 	}
 
 	// Get should always miss
-	if _, ok := c.GetURL("https://example.com/c.yaml"); ok {
+	if _, ok := c.GetURL(slog.Default(), "https://example.com/c.yaml"); ok {
 		t.Fatal("expected cache miss with NoCache")
 	}
 
 	// But the file should exist on disk
 	c2 := &Cache{Dir: dir, NoCache: false}
-	if _, ok := c2.GetURL("https://example.com/c.yaml"); !ok {
+	if _, ok := c2.GetURL(slog.Default(), "https://example.com/c.yaml"); !ok {
 		t.Fatal("expected cache hit with NoCache disabled")
 	}
 }
@@ -236,10 +237,10 @@ func TestNoCache(t *testing.T) {
 func TestNilCache(t *testing.T) {
 	t.Parallel()
 	var c *Cache
-	if _, ok := c.GetURL("https://example.com"); ok {
+	if _, ok := c.GetURL(slog.Default(), "https://example.com"); ok {
 		t.Fatal("expected miss on nil cache")
 	}
-	if _, ok := c.GetGitHub("o", "r", "p", "ref"); ok {
+	if _, ok := c.GetGitHub(slog.Default(), "o", "r", "p", "ref"); ok {
 		t.Fatal("expected miss on nil cache")
 	}
 	if err := c.PutURL("https://example.com", []byte("rules: []\n")); err != nil {
