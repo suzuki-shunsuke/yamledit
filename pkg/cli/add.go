@@ -16,6 +16,7 @@ type AddArgs struct {
 	*Flags
 	Alias     string
 	Migration string
+	Force     bool
 }
 
 func NewAdd(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
@@ -27,6 +28,14 @@ func NewAdd(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
 		Usage: "Add a Reusable Rule alias to the configuration file",
 		Action: func(ctx context.Context, _ *cli.Command) error {
 			return addAction(ctx, logger, args)
+		},
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:        "force",
+				Aliases:     []string{"f"},
+				Usage:       "Overwrite existing entry",
+				Destination: &args.Force,
+			},
 		},
 		Arguments: []cli.Argument{
 			&cli.StringArg{
@@ -57,5 +66,5 @@ func addAction(ctx context.Context, logger *slogutil.Logger, args *AddArgs) erro
 	}
 	ghClient := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv(), ghtknEnabled)
 	c := cache.New(args.NoCache)
-	return controller.Add(ctx, logger, ghClient, c, ".", args.Alias, args.Migration) //nolint:wrapcheck
+	return controller.Add(ctx, logger, ghClient, c, ".", args.Alias, args.Migration, args.Force) //nolint:wrapcheck
 }
