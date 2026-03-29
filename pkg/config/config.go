@@ -188,18 +188,18 @@ func ReadConfigs(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, 
 		}
 		configs = append(configs, cfg)
 	}
-	// Also load aliases from project config
+	// Also load reusable rules from project config
 	projCfg, err := ReadProjectConfig(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read project config: %w", err)
 	}
-	for name, target := range projCfg.Aliases {
-		cfg, err := resolveImport(ctx, logger, ghClient, c, target)
+	for _, rule := range projCfg.ReusableRules {
+		cfg, err := resolveImport(ctx, logger, ghClient, c, rule.Import)
 		if err != nil {
-			return nil, fmt.Errorf("resolve alias %s (%s): %w", name, target, err)
+			return nil, fmt.Errorf("resolve reusable rule %s (%s): %w", rule.Name, rule.Import, err)
 		}
 		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
-			return nil, fmt.Errorf("resolve imports in alias %s: %w", name, err)
+			return nil, fmt.Errorf("resolve imports in reusable rule %s: %w", rule.Name, err)
 		}
 		configs = append(configs, cfg)
 	}
@@ -243,8 +243,8 @@ func readConfigByPath(ctx context.Context, logger *slog.Logger, ghClient *gh.Cli
 	cfg, err := ReadConfig(p)
 	if err != nil {
 		if isMigrationName && errors.Is(err, os.ErrNotExist) {
-			// Fallback to alias in project config
-			return resolveAlias(ctx, logger, ghClient, c, dir, origName)
+			// Fallback to reusable rule in project config
+			return resolveReusableRule(ctx, logger, ghClient, c, dir, origName)
 		}
 		return nil, fmt.Errorf("read migration file %s: %w", p, err)
 	}
@@ -254,22 +254,22 @@ func readConfigByPath(ctx context.Context, logger *slog.Logger, ghClient *gh.Cli
 	return cfg, nil
 }
 
-func resolveAlias(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir, name string) (*Config, error) {
+func resolveReusableRule(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir, name string) (*Config, error) {
 	projCfg, err := ReadProjectConfig(dir)
 	if err != nil {
 		return nil, fmt.Errorf("read project config: %w", err)
 	}
-	if target, ok := projCfg.Aliases[name]; ok {
+	if target, ok := projCfg.FindReusableRule(name); ok {
 		cfg, err := resolveImport(ctx, logger, ghClient, c, target)
 		if err != nil {
-			return nil, fmt.Errorf("resolve alias %s (%s): %w", name, target, err)
+			return nil, fmt.Errorf("resolve reusable rule %s (%s): %w", name, target, err)
 		}
 		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
-			return nil, fmt.Errorf("resolve imports in alias %s: %w", name, err)
+			return nil, fmt.Errorf("resolve imports in reusable rule %s: %w", name, err)
 		}
 		return cfg, nil
 	}
-	return nil, fmt.Errorf("migration %q not found in .yamledit/ or aliases", name)
+	return nil, fmt.Errorf("migration %q not found in .yamledit/ or reusable_rules", name)
 }
 
 var yamlSuffixPattern = regexp.MustCompile(`\.ya?ml$`)

@@ -482,8 +482,8 @@ func TestReadConfigsByPaths_localPathEscape(t *testing.T) {
 func TestReadConfigs_skipsConfigYAML(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	// config.yaml with no aliases — should not be loaded as a migration
-	setupMigration(t, dir, "config", "aliases: {}\n")
+	// config.yaml with no reusable rules — should not be loaded as a migration
+	setupMigration(t, dir, "config", "reusable_rules: []\n")
 	setupMigration(t, dir, "foo", `rules:
   - path: "$"
     actions:
@@ -500,7 +500,7 @@ func TestReadConfigs_skipsConfigYAML(t *testing.T) {
 	}
 }
 
-func TestReadConfigs_withAliases(t *testing.T) {
+func TestReadConfigs_withReusableRules(t *testing.T) {
 	t.Parallel()
 	remoteConfig := `rules:
   - path: "$"
@@ -523,19 +523,19 @@ func TestReadConfigs_withAliases(t *testing.T) {
         keys:
           - age
 `)
-	// Create config.yaml with an alias
-	setupMigration(t, dir, "config", "aliases:\n  remote-rule: "+srv.URL+"/migration.yaml\n")
+	// Create config.yaml with a reusable rule
+	setupMigration(t, dir, "config", "reusable_rules:\n  - name: remote-rule\n    import: "+srv.URL+"/migration.yaml\n")
 
 	got, err := ReadConfigs(context.Background(), slog.Default(), nil, nil, dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(got) != 2 {
-		t.Fatalf("expected 2 configs (1 local + 1 alias), got %d", len(got))
+		t.Fatalf("expected 2 configs (1 local + 1 reusable rule), got %d", len(got))
 	}
 }
 
-func TestReadConfigsByPaths_aliasFallback(t *testing.T) {
+func TestReadConfigsByPaths_reusableRuleFallback(t *testing.T) {
 	t.Parallel()
 	remoteConfig := testRemoteConfig
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -544,8 +544,8 @@ func TestReadConfigsByPaths_aliasFallback(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	dir := t.TempDir()
-	// Create config.yaml with an alias but no local migration file
-	setupMigration(t, dir, "config", "aliases:\n  my-rule: "+srv.URL+"/migration.yaml\n")
+	// Create config.yaml with a reusable rule but no local migration file
+	setupMigration(t, dir, "config", "reusable_rules:\n  - name: my-rule\n    import: "+srv.URL+"/migration.yaml\n")
 
 	configs, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"my-rule"})
 	if err != nil {
@@ -567,10 +567,10 @@ func TestReadConfigsByPaths_aliasFallback(t *testing.T) {
 	}
 }
 
-func TestReadConfigsByPaths_localOverAlias(t *testing.T) {
+func TestReadConfigsByPaths_localOverReusableRule(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	// Create both a local migration and an alias with the same name
+	// Create both a local migration and a reusable rule with the same name
 	setupMigration(t, dir, "my-rule", `rules:
   - path: "$"
     actions:
@@ -578,7 +578,7 @@ func TestReadConfigsByPaths_localOverAlias(t *testing.T) {
         keys:
           - age
 `)
-	setupMigration(t, dir, "config", "aliases:\n  my-rule: https://example.com/should-not-be-used\n")
+	setupMigration(t, dir, "config", "reusable_rules:\n  - name: my-rule\n    import: https://example.com/should-not-be-used\n")
 
 	configs, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"my-rule"})
 	if err != nil {
@@ -589,15 +589,15 @@ func TestReadConfigsByPaths_localOverAlias(t *testing.T) {
 	}
 }
 
-func TestReadConfigsByPaths_aliasNotFound(t *testing.T) {
+func TestReadConfigsByPaths_reusableRuleNotFound(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	// Create config.yaml without the requested alias
-	setupMigration(t, dir, "config", "aliases:\n  other: https://example.com/other\n")
+	// Create config.yaml without the requested reusable rule
+	setupMigration(t, dir, "config", "reusable_rules:\n  - name: other\n    import: https://example.com/other\n")
 
 	_, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"nonexistent"})
 	if err == nil {
-		t.Fatal("expected error for nonexistent migration/alias, got nil")
+		t.Fatal("expected error for nonexistent migration/reusable rule, got nil")
 	}
 }
 
