@@ -124,6 +124,75 @@ func TestAdd_forceOverwrite(t *testing.T) {
 	}
 }
 
+func TestAdd_preservesComments(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(`rules: []`)) //nolint:errcheck
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, ".yamledit")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	configContent := "# my config\nreusable_rules:\n  - name: existing # keep this\n    import: https://example.com/existing\n"
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(configContent), 0o644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+
+	err := Add(context.Background(), newLogger(), nil, nil, dir, "new-rule", srv.URL+"/migration.yaml", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	b, err := os.ReadFile(filepath.Join(configDir, "config.yaml"))
+	if err != nil {
+		t.Fatalf("failed to read config: %v", err)
+	}
+	got := string(b)
+	for _, want := range []string{"# my config", "# keep this", "name: new-rule"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected %q in output, got:\n%s", want, got)
+		}
+	}
+}
+
+func TestAdd_forcePreservesComments(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(`rules: []`)) //nolint:errcheck
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	configDir := filepath.Join(dir, ".yamledit")
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	configContent := "# my config\nreusable_rules:\n  - name: my-rule # keep this\n    import: https://example.com/old\n"
+	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(configContent), 0o644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+
+	err := Add(context.Background(), newLogger(), nil, nil, dir, "my-rule", srv.URL+"/new.yaml", true)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	b, err := os.ReadFile(filepath.Join(configDir, "config.yaml"))
+	if err != nil {
+		t.Fatalf("failed to read config: %v", err)
+	}
+	got := string(b)
+	for _, want := range []string{"# my config", "# keep this", srv.URL + "/new.yaml"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected %q in output, got:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "https://example.com/old") {
+		t.Errorf("old import URL should be replaced, got:\n%s", got)
+	}
+}
+
 func TestAdd_invalidMigrationPrefix(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
