@@ -26,6 +26,12 @@ func Run(ctx context.Context, logger *slogutil.Logger, env *urfave.Env) error {
 				Destination: &gFlags.LogLevel,
 				Local:       true,
 			},
+			&cli.BoolFlag{
+				Name:        "no-cache",
+				Usage:       "Ignore cache and always fetch remote imports",
+				Destination: &gFlags.NoCache,
+				Local:       true,
+			},
 		},
 		Commands: []*cli.Command{
 			NewInit(logger, gFlags),

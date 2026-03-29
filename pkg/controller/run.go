@@ -11,6 +11,7 @@ import (
 	"github.com/goccy/go-yaml/parser"
 	"github.com/suzuki-shunsuke/go-yamledit/yamledit"
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
+	"github.com/suzuki-shunsuke/yamledit/pkg/cache"
 	"github.com/suzuki-shunsuke/yamledit/pkg/config"
 	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
@@ -20,8 +21,8 @@ type ruleActions struct {
 	actions []yamledit.Action
 }
 
-func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, dir string, migrations, yamlFiles []string) error {
-	configs, err := loadConfigs(ctx, ghClient, dir, migrations)
+func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir string, migrations, yamlFiles []string) error {
+	configs, err := loadConfigs(ctx, logger, ghClient, c, dir, migrations)
 	if err != nil {
 		return fmt.Errorf("read migration configs: %w", err)
 	}
@@ -52,15 +53,15 @@ func Run(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, dir 
 	return nil
 }
 
-func loadConfigs(ctx context.Context, ghClient *gh.Client, dir string, migrations []string) ([]*config.Config, error) {
+func loadConfigs(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir string, migrations []string) ([]*config.Config, error) {
 	if len(migrations) == 0 {
-		configs, err := config.ReadConfigs(ctx, ghClient, dir)
+		configs, err := config.ReadConfigs(ctx, logger.Logger, ghClient, c, dir)
 		if err != nil {
 			return nil, fmt.Errorf("read all configs: %w", err)
 		}
 		return configs, nil
 	}
-	configs, err := config.ReadConfigsByPaths(ctx, ghClient, dir, migrations)
+	configs, err := config.ReadConfigsByPaths(ctx, logger.Logger, ghClient, c, dir, migrations)
 	if err != nil {
 		return nil, fmt.Errorf("read configs by paths: %w", err)
 	}
