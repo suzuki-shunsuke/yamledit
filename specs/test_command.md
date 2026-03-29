@@ -25,6 +25,9 @@ If a `<test>.yaml` exists without a corresponding `<test>_result.yaml`, a warnin
 If no arguments are specified, all migration files under `.yamledit` are tested. If no test files exist, a warning is output and the migration is skipped.
 If test files aren't modified expectedly, diff are outputted.
 
+Unlike the `run` command, the `@` prefix is not required.
+Also, `<migration>` does not support remote migration files such as URLs or GitHub Contents.
+
 test directories and files are created by `yamledit new -test` command.
 
 ```sh
