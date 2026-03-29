@@ -47,6 +47,9 @@ func discoverMigrations(dir string) ([]string, error) {
 	}
 	names := make([]string, 0, len(matches))
 	for _, m := range matches {
+		if filepath.Base(m) == "config.yaml" {
+			continue
+		}
 		name := strings.TrimSuffix(filepath.Base(m), ".yaml")
 		names = append(names, name)
 	}

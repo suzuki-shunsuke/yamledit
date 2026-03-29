@@ -175,6 +175,9 @@ func ReadConfigs(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, 
 	}
 	configs := make([]*Config, 0, len(matches))
 	for _, p := range matches {
+		if filepath.Base(p) == "config.yaml" {
+			continue
+		}
 		cfg, err := ReadConfig(p)
 		if err != nil {
 			return nil, fmt.Errorf("read migration file %s: %w", p, err)

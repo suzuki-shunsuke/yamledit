@@ -483,6 +483,28 @@ func TestReadConfigsByPaths_localPathEscape(t *testing.T) {
 	}
 }
 
+func TestReadConfigs_skipsConfigYAML(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	setupMigration(t, dir, "config", `aliases:
+  goreleaser-v2: https://example.com/goreleaser-v2
+`)
+	setupMigration(t, dir, "foo", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	got, err := ReadConfigs(context.Background(), slog.Default(), nil, nil, dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 config (config.yaml should be skipped), got %d", len(got))
+	}
+}
+
 func TestResolveImports_noImport(t *testing.T) {
 	t.Parallel()
 	cfg := &Config{
