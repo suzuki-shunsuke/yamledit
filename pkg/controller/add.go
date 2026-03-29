@@ -70,7 +70,7 @@ func readOrCreateConfig(configPath string) ([]byte, error) {
 	b, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []byte("reusable_rules: []\n"), nil
+			return []byte("# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/yamledit/main/json-schema/config.json\nreusable_rules: []\n"), nil
 		}
 		return nil, fmt.Errorf("read config file: %w", err)
 	}
