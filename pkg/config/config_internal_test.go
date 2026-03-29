@@ -12,6 +12,14 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+const testRemoteConfig = `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`
+
 func setupMigration(t *testing.T, dir, name, content string) {
 	t.Helper()
 	configDir := filepath.Join(dir, ".yamledit")
@@ -371,13 +379,7 @@ func TestReadConfigs(t *testing.T) { //nolint:funlen,maintidx
 
 func TestResolveImports(t *testing.T) {
 	t.Parallel()
-	remoteConfig := `rules:
-  - path: "$"
-    actions:
-      - type: remove_keys
-        keys:
-          - age
-`
+	remoteConfig := testRemoteConfig
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(remoteConfig)) //nolint:errcheck
 	}))
@@ -420,13 +422,7 @@ func TestResolveImports(t *testing.T) {
 
 func TestReadConfigsByPaths_remoteURL(t *testing.T) {
 	t.Parallel()
-	remoteConfig := `rules:
-  - path: "$"
-    actions:
-      - type: remove_keys
-        keys:
-          - age
-`
+	remoteConfig := testRemoteConfig
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(remoteConfig)) //nolint:errcheck
 	}))
@@ -486,9 +482,8 @@ func TestReadConfigsByPaths_localPathEscape(t *testing.T) {
 func TestReadConfigs_skipsConfigYAML(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	setupMigration(t, dir, "config", `aliases:
-  goreleaser-v2: https://example.com/goreleaser-v2
-`)
+	// config.yaml with no aliases — should not be loaded as a migration
+	setupMigration(t, dir, "config", "aliases: {}\n")
 	setupMigration(t, dir, "foo", `rules:
   - path: "$"
     actions:
@@ -502,6 +497,107 @@ func TestReadConfigs_skipsConfigYAML(t *testing.T) {
 	}
 	if len(got) != 1 {
 		t.Fatalf("expected 1 config (config.yaml should be skipped), got %d", len(got))
+	}
+}
+
+func TestReadConfigs_withAliases(t *testing.T) {
+	t.Parallel()
+	remoteConfig := `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - name
+`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(remoteConfig)) //nolint:errcheck
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	// Create a local migration
+	setupMigration(t, dir, "local", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	// Create config.yaml with an alias
+	setupMigration(t, dir, "config", "aliases:\n  remote-rule: "+srv.URL+"/migration.yaml\n")
+
+	got, err := ReadConfigs(context.Background(), slog.Default(), nil, nil, dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("expected 2 configs (1 local + 1 alias), got %d", len(got))
+	}
+}
+
+func TestReadConfigsByPaths_aliasFallback(t *testing.T) {
+	t.Parallel()
+	remoteConfig := testRemoteConfig
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(remoteConfig)) //nolint:errcheck
+	}))
+	t.Cleanup(srv.Close)
+
+	dir := t.TempDir()
+	// Create config.yaml with an alias but no local migration file
+	setupMigration(t, dir, "config", "aliases:\n  my-rule: "+srv.URL+"/migration.yaml\n")
+
+	configs, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"my-rule"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(configs) != 1 {
+		t.Fatalf("expected 1 config, got %d", len(configs))
+	}
+	want := []*Rule{
+		{
+			Path: "$",
+			Actions: []*Action{
+				{Type: "remove_keys", Keys: []string{"age"}},
+			},
+		},
+	}
+	if diff := cmp.Diff(want, configs[0].Rules); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestReadConfigsByPaths_localOverAlias(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	// Create both a local migration and an alias with the same name
+	setupMigration(t, dir, "my-rule", `rules:
+  - path: "$"
+    actions:
+      - type: remove_keys
+        keys:
+          - age
+`)
+	setupMigration(t, dir, "config", "aliases:\n  my-rule: https://example.com/should-not-be-used\n")
+
+	configs, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"my-rule"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(configs) != 1 {
+		t.Fatalf("expected 1 config, got %d", len(configs))
+	}
+}
+
+func TestReadConfigsByPaths_aliasNotFound(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	// Create config.yaml without the requested alias
+	setupMigration(t, dir, "config", "aliases:\n  other: https://example.com/other\n")
+
+	_, err := ReadConfigsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"nonexistent"})
+	if err == nil {
+		t.Fatal("expected error for nonexistent migration/alias, got nil")
 	}
 }
 
