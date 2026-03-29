@@ -63,7 +63,7 @@ func ReadConfig(dir string) (*Config, error) {
 // ReadGlobalConfig reads the global config and returns the Config.
 // Returns an empty Config if no global config is found.
 func ReadGlobalConfig() (*Config, error) {
-	p := resolveGlobalConfigPath()
+	p := GlobalConfigPath()
 	if p == "" {
 		return &Config{}, nil
 	}
@@ -81,7 +81,9 @@ func ReadGlobalConfig() (*Config, error) {
 	return &cfg, nil
 }
 
-func resolveGlobalConfigPath() string {
+// GlobalConfigPath returns the path to the global config file.
+// Returns "" if no suitable location is found.
+func GlobalConfigPath() string {
 	if v := os.Getenv("YAMLEDIT_GLOBAL_CONFIG"); v != "" {
 		return v
 	}

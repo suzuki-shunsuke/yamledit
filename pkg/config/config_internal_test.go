@@ -36,9 +36,9 @@ func TestResolveGlobalConfigPath(t *testing.T) {
 			if _, ok := tt.env["XDG_CONFIG_HOME"]; !ok {
 				t.Setenv("XDG_CONFIG_HOME", "")
 			}
-			got := resolveGlobalConfigPath()
+			got := GlobalConfigPath()
 			if got != tt.want {
-				t.Errorf("resolveGlobalConfigPath() = %q, want %q", got, tt.want)
+				t.Errorf("GlobalConfigPath() = %q, want %q", got, tt.want)
 			}
 		})
 	}
