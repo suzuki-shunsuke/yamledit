@@ -281,7 +281,7 @@ func parseWhenDuplicate(s string) (yamledit.WhenDuplicateKey, error) {
 func editFile(logger *slogutil.Logger, path string, actions []yamledit.Action) error {
 	updated, err := yamledit.EditFile(path, actions...)
 	if err != nil {
-		return err
+		return fmt.Errorf("edit file: %w", err)
 	}
 	if updated {
 		logger.Info("updated", "file", path)
