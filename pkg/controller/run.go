@@ -8,7 +8,6 @@ import (
 
 	"github.com/bmatcuk/doublestar/v4"
 	"github.com/expr-lang/expr"
-	"github.com/goccy/go-yaml/parser"
 	"github.com/suzuki-shunsuke/go-yamledit/yamledit"
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
 	"github.com/suzuki-shunsuke/yamledit/pkg/cache"
@@ -279,35 +278,15 @@ func parseWhenDuplicate(s string) (yamledit.WhenDuplicateKey, error) {
 	}
 }
 
-func applyActions(b []byte, actions []yamledit.Action) (string, error) {
-	file, err := parser.ParseBytes(b, parser.ParseComments)
-	if err != nil {
-		return "", fmt.Errorf("parse YAML: %w", err)
-	}
-	for _, act := range actions {
-		if err := act.Run(file.Docs[0].Body); err != nil {
-			return "", fmt.Errorf("run action: %w", err)
-		}
-	}
-	return file.String(), nil
-}
-
 func editFile(logger *slogutil.Logger, path string, actions []yamledit.Action) error {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("read file: %w", err)
-	}
-	result, err := applyActions(b, actions)
+	updated, err := yamledit.EditFile(path, actions...)
 	if err != nil {
 		return err
 	}
-	if result == string(b) {
+	if updated {
+		logger.Info("updated", "file", path)
+	} else {
 		logger.Info("no changes", "file", path)
-		return nil
 	}
-	if err := os.WriteFile(path, []byte(result), 0o644); err != nil { //nolint:gosec,mnd
-		return fmt.Errorf("write file: %w", err)
-	}
-	logger.Info("updated", "file", path)
 	return nil
 }

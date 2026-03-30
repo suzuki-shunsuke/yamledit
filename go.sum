@@ -54,8 +54,8 @@ github.com/suzuki-shunsuke/go-error-with-exit-code v1.0.0 h1:oVXrrYNGBq4POyITQNW
 github.com/suzuki-shunsuke/go-error-with-exit-code v1.0.0/go.mod h1:kDFtLeftDiIUUHXGI3xq5eJ+uAOi50FPrxPENTHktJ0=
 github.com/suzuki-shunsuke/go-exec v0.0.1 h1:xn/lvYnRQOujUd46ph6f6IT0gVJIC8+3liSZKOjNj44=
 github.com/suzuki-shunsuke/go-exec v0.0.1/go.mod h1:KstSwIiQTKY34wEurUcFyKkaJDogBr5E3xxfdkkzvb0=
-github.com/suzuki-shunsuke/go-yamledit v0.0.3 h1:RbNF3VBzZMeg7IqPKYRq5dPoDSB1wxya8y+CxS+3GW0=
-github.com/suzuki-shunsuke/go-yamledit v0.0.3/go.mod h1:fQ9STTI+noUZ2VZ4qY44d6DSvfPFzE4YhaSTUGhKdq4=
+github.com/suzuki-shunsuke/go-yamledit v0.0.4 h1:Koq66FoTWYAOc7JNB5uyb/2SQFRmFr8eQs6Nfrqnhp0=
+github.com/suzuki-shunsuke/go-yamledit v0.0.4/go.mod h1:fQ9STTI+noUZ2VZ4qY44d6DSvfPFzE4YhaSTUGhKdq4=
 github.com/suzuki-shunsuke/slog-error v0.2.2 h1:z8rymlIlZcMA+ERnnhVigQ0Q+X0pxKqBfDzSIyGh6vU=
 github.com/suzuki-shunsuke/slog-error v0.2.2/go.mod h1:w45QyO2G0uiEuo9hhrcLqqRl3hmYon9jGgq9CrCxxOY=
 github.com/suzuki-shunsuke/slog-util v0.3.2 h1:P4sc/swT8rwmmKDfMrh9GR+AzYJhJdW3BSxZXYBURuY=
