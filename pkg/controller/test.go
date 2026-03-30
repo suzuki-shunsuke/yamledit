@@ -124,7 +124,7 @@ func runTestCase(logger *slogutil.Logger, testDir, fname, migrationName string, 
 		return false, fmt.Errorf("read expected result %s: %w", resultPath, err)
 	}
 
-	got, err := applyActions(input, actions)
+	got, err := yamledit.EditBytes(inputPath, input, actions...)
 	if err != nil {
 		return false, fmt.Errorf("apply actions to %s: %w", inputPath, err)
 	}
