@@ -22,21 +22,18 @@ func New(stderr io.Writer, dir, name string) error {
 	if !pattern.MatchString(name) {
 		return fmt.Errorf(`invalid migration name: '%s'. Must match pattern '%s'`, name, pattern.String())
 	}
-	configDir := filepath.Join(dir, ".yamledit")
-	if err := os.MkdirAll(configDir, dirPermission); err != nil {
-		return fmt.Errorf("create config directory .yamledit: %w", err)
+	rulesetDir := filepath.Join(dir, ".yamledit", name)
+	testDir := filepath.Join(rulesetDir, "normal")
+	if err := os.MkdirAll(testDir, dirPermission); err != nil {
+		return fmt.Errorf("create test directory: %w", err)
 	}
 	files := []struct {
 		path    string
 		content []byte
 	}{
-		{filepath.Join(configDir, name+".yaml"), defaultConfig},
-		{filepath.Join(configDir, name+"_test", "normal.yaml"), []byte("age: 10\n")},
-		{filepath.Join(configDir, name+"_test", "normal_result.yaml"), []byte("age: 10\n")},
-	}
-	testDir := filepath.Join(configDir, name+"_test")
-	if err := os.MkdirAll(testDir, dirPermission); err != nil {
-		return fmt.Errorf("create test directory: %w", err)
+		{filepath.Join(rulesetDir, "ruleset.yaml"), defaultConfig},
+		{filepath.Join(testDir, "test.yaml"), []byte("age: 10\n")},
+		{filepath.Join(testDir, "result.yaml"), []byte("age: 10\n")},
 	}
 	for _, f := range files {
 		created, err := writeFileIfNotExist(f.path, f.content)

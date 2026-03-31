@@ -19,7 +19,7 @@ type ReusableRule struct {
 	Import string `json:"import" yaml:"import" jsonschema_description:"URL or GitHub Contents path to import the rule from."`
 }
 
-// Config represents the structure of .yamledit/config.yaml.
+// Config represents the structure of .yamledit/yamledit.yaml.
 type Config struct {
 	ReusableRules []ReusableRule `json:"reusable_rules" yaml:"reusable_rules" jsonschema_description:"List of reusable rules."`
 }
@@ -42,10 +42,10 @@ func UnmarshalConfig(b []byte, cfg *Config) error {
 	return nil
 }
 
-// ReadConfig reads .yamledit/config.yaml and returns the Config.
+// ReadConfig reads .yamledit/yamledit.yaml and returns the Config.
 // Returns an empty Config if the file does not exist.
 func ReadConfig(dir string) (*Config, error) {
-	p := filepath.Join(dir, ".yamledit", "config.yaml")
+	p := filepath.Join(dir, ".yamledit", "yamledit.yaml")
 	b, err := os.ReadFile(p)
 	if err != nil {
 		if os.IsNotExist(err) {

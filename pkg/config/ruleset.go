@@ -169,19 +169,16 @@ func fetchURLContent(ctx context.Context, url string) ([]byte, error) {
 }
 
 func ReadRulesets(ctx context.Context, logger *slog.Logger, ghClient *gh.Client, c *cache.Cache, dir string) ([]*Ruleset, error) {
-	pattern := filepath.Join(dir, ".yamledit", "*.yaml")
+	pattern := filepath.Join(dir, ".yamledit", "*", "ruleset.yaml")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("glob migration files: %w", err)
+		return nil, fmt.Errorf("glob ruleset files: %w", err)
 	}
 	configs := make([]*Ruleset, 0, len(matches))
 	for _, p := range matches {
-		if filepath.Base(p) == "config.yaml" {
-			continue
-		}
 		cfg, err := ReadRuleset(p)
 		if err != nil {
-			return nil, fmt.Errorf("read migration file %s: %w", p, err)
+			return nil, fmt.Errorf("read ruleset file %s: %w", p, err)
 		}
 		if err := ResolveImports(ctx, logger, ghClient, c, cfg); err != nil {
 			return nil, fmt.Errorf("resolve imports in %s: %w", p, err)
@@ -238,7 +235,7 @@ func readConfigByPath(ctx context.Context, logger *slog.Logger, ghClient *gh.Cli
 	p = strings.TrimPrefix(p, "./")
 	isMigrationName := !filepath.IsAbs(p) && !yamlSuffixPattern.MatchString(p)
 	if isMigrationName {
-		p = filepath.Join(dir, ".yamledit", p+".yaml")
+		p = filepath.Join(dir, ".yamledit", p, "ruleset.yaml")
 	}
 	cfg, err := ReadRuleset(p)
 	if err != nil {

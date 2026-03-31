@@ -65,7 +65,7 @@ func TestNew(t *testing.T) { //nolint:funlen
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			p := filepath.Join(dir, ".yamledit", tt.input+".yaml")
+			p := filepath.Join(dir, ".yamledit", tt.input, "ruleset.yaml")
 			b, err := os.ReadFile(p)
 			if err != nil {
 				t.Fatalf("failed to read created file: %v", err)
@@ -74,8 +74,8 @@ func TestNew(t *testing.T) { //nolint:funlen
 				t.Errorf("file content mismatch:\ngot:\n%s\nwant:\n%s", string(b), string(defaultConfig))
 			}
 			// Verify test files
-			for _, testFile := range []string{"normal.yaml", "normal_result.yaml"} {
-				tp := filepath.Join(dir, ".yamledit", tt.input+"_test", testFile)
+			for _, testFile := range []string{"test.yaml", "result.yaml"} {
+				tp := filepath.Join(dir, ".yamledit", tt.input, "normal", testFile)
 				tb, err := os.ReadFile(tp)
 				if err != nil {
 					t.Fatalf("failed to read test file %s: %v", testFile, err)
@@ -98,9 +98,9 @@ func TestNew_idempotent(t *testing.T) {
 	}
 
 	files := []string{
-		filepath.Join(dir, ".yamledit", name+".yaml"),
-		filepath.Join(dir, ".yamledit", name+"_test", "normal.yaml"),
-		filepath.Join(dir, ".yamledit", name+"_test", "normal_result.yaml"),
+		filepath.Join(dir, ".yamledit", name, "ruleset.yaml"),
+		filepath.Join(dir, ".yamledit", name, "normal", "test.yaml"),
+		filepath.Join(dir, ".yamledit", name, "normal", "result.yaml"),
 	}
 	infos := make([]os.FileInfo, len(files))
 	for i, f := range files {
@@ -132,11 +132,11 @@ func TestNew_migrationExistsButTestFilesMissing(t *testing.T) {
 	name := "my-migration"
 
 	// Create only the migration file
-	configDir := filepath.Join(dir, ".yamledit")
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
+	rulesetDir := filepath.Join(dir, ".yamledit", name)
+	if err := os.MkdirAll(rulesetDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, name+".yaml"), defaultConfig, 0o644); err != nil { //nolint:gosec
+	if err := os.WriteFile(filepath.Join(rulesetDir, "ruleset.yaml"), defaultConfig, 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 
@@ -145,8 +145,8 @@ func TestNew_migrationExistsButTestFilesMissing(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, testFile := range []string{"normal.yaml", "normal_result.yaml"} {
-		tp := filepath.Join(configDir, name+"_test", testFile)
+	for _, testFile := range []string{"test.yaml", "result.yaml"} {
+		tp := filepath.Join(rulesetDir, "normal", testFile)
 		b, err := os.ReadFile(tp)
 		if err != nil {
 			t.Fatalf("failed to read test file %s: %v", testFile, err)

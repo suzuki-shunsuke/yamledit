@@ -22,11 +22,22 @@ const testRemoteConfig = `rules:
 
 func setupMigration(t *testing.T, dir, name, content string) {
 	t.Helper()
-	configDir := filepath.Join(dir, ".yamledit")
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
+	rulesetDir := filepath.Join(dir, ".yamledit", name)
+	if err := os.MkdirAll(rulesetDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, name+".yaml"), []byte(content), 0o644); err != nil { //nolint:gosec
+	if err := os.WriteFile(filepath.Join(rulesetDir, "ruleset.yaml"), []byte(content), 0o644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
+}
+
+func setupYamleditConfig(t *testing.T, dir, content string) {
+	t.Helper()
+	yamleditDir := filepath.Join(dir, ".yamledit")
+	if err := os.MkdirAll(yamleditDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(yamleditDir, "yamledit.yaml"), []byte(content), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 }
@@ -459,7 +470,7 @@ func TestReadRulesetsByPaths_localPathEscape(t *testing.T) {
         keys:
           - age
 `)
-	configs, err := ReadRulesetsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"./" + filepath.Join(dir, ".yamledit", "test.yaml")})
+	configs, err := ReadRulesetsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"./" + filepath.Join(dir, ".yamledit", "test", "ruleset.yaml")})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -479,11 +490,17 @@ func TestReadRulesetsByPaths_localPathEscape(t *testing.T) {
 	}
 }
 
-func TestReadRulesets_skipsConfigYAML(t *testing.T) {
+func TestReadRulesets_ignoresNonRulesetDirs(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	// config.yaml with no reusable rules — should not be loaded as a migration
-	setupMigration(t, dir, "config", "reusable_rules: []\n")
+	// yamledit.yaml is a file, not a ruleset — should be ignored
+	yamleditDir := filepath.Join(dir, ".yamledit")
+	if err := os.MkdirAll(yamleditDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(yamleditDir, "yamledit.yaml"), []byte("reusable_rules: []\n"), 0o644); err != nil { //nolint:gosec
+		t.Fatal(err)
+	}
 	setupMigration(t, dir, "foo", `rules:
   - path: "$"
     actions:
@@ -496,7 +513,7 @@ func TestReadRulesets_skipsConfigYAML(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(got) != 1 {
-		t.Fatalf("expected 1 config (config.yaml should be skipped), got %d", len(got))
+		t.Fatalf("expected 1 ruleset, got %d", len(got))
 	}
 }
 
@@ -523,8 +540,8 @@ func TestReadRulesets_withReusableRules(t *testing.T) {
         keys:
           - age
 `)
-	// Create config.yaml with a reusable rule
-	setupMigration(t, dir, "config", "reusable_rules:\n  - name: remote-rule\n    import: "+srv.URL+"/migration.yaml\n")
+	// Create yamledit.yaml with a reusable rule
+	setupYamleditConfig(t, dir, "reusable_rules:\n  - name: remote-rule\n    import: "+srv.URL+"/migration.yaml\n")
 
 	got, err := ReadRulesets(context.Background(), slog.Default(), nil, nil, dir)
 	if err != nil {
@@ -544,8 +561,8 @@ func TestReadRulesetsByPaths_reusableRuleFallback(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	dir := t.TempDir()
-	// Create config.yaml with a reusable rule but no local migration file
-	setupMigration(t, dir, "config", "reusable_rules:\n  - name: my-rule\n    import: "+srv.URL+"/migration.yaml\n")
+	// Create yamledit.yaml with a reusable rule but no local migration file
+	setupYamleditConfig(t, dir, "reusable_rules:\n  - name: my-rule\n    import: "+srv.URL+"/migration.yaml\n")
 
 	configs, err := ReadRulesetsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"my-rule"})
 	if err != nil {
@@ -578,7 +595,7 @@ func TestReadRulesetsByPaths_localOverReusableRule(t *testing.T) {
         keys:
           - age
 `)
-	setupMigration(t, dir, "config", "reusable_rules:\n  - name: my-rule\n    import: https://example.com/should-not-be-used\n")
+	setupYamleditConfig(t, dir, "reusable_rules:\n  - name: my-rule\n    import: https://example.com/should-not-be-used\n")
 
 	configs, err := ReadRulesetsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"my-rule"})
 	if err != nil {
@@ -592,8 +609,8 @@ func TestReadRulesetsByPaths_localOverReusableRule(t *testing.T) {
 func TestReadRulesetsByPaths_reusableRuleNotFound(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	// Create config.yaml without the requested reusable rule
-	setupMigration(t, dir, "config", "reusable_rules:\n  - name: other\n    import: https://example.com/other\n")
+	// Create yamledit.yaml without the requested reusable rule
+	setupYamleditConfig(t, dir, "reusable_rules:\n  - name: other\n    import: https://example.com/other\n")
 
 	_, err := ReadRulesetsByPaths(context.Background(), slog.Default(), nil, nil, dir, []string{"nonexistent"})
 	if err == nil {

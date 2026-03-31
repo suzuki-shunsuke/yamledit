@@ -4,16 +4,17 @@
 yamledit new <migration name>
 ```
 
-new command creates a migration file and test files using built-in templates if they don't exist.
+new command creates a ruleset file and test files using built-in templates if they don't exist.
 
 The following files are created:
 
 ```
 .yamledit/
-  <migration>.yaml # migration file
-  <migration>_test/
-    normal.yaml # Test file
-    normal_result.yaml # Expected Result
+  <migration>/
+    ruleset.yaml # Ruleset file
+    normal/
+      test.yaml # Test file
+      result.yaml # Expected Result
 ```
 
 If files already exist, they aren't changed.

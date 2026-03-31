@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/suzuki-shunsuke/go-yamledit/yamledit"
 	"github.com/suzuki-shunsuke/slog-util/slogutil"
@@ -40,24 +39,21 @@ func Test(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *
 }
 
 func discoverMigrations(dir string) ([]string, error) {
-	pattern := filepath.Join(dir, ".yamledit", "*.yaml")
+	pattern := filepath.Join(dir, ".yamledit", "*", "ruleset.yaml")
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, fmt.Errorf("glob migration files: %w", err)
+		return nil, fmt.Errorf("glob ruleset files: %w", err)
 	}
 	names := make([]string, 0, len(matches))
 	for _, m := range matches {
-		if filepath.Base(m) == "config.yaml" {
-			continue
-		}
-		name := strings.TrimSuffix(filepath.Base(m), ".yaml")
+		name := filepath.Base(filepath.Dir(m))
 		names = append(names, name)
 	}
 	return names, nil
 }
 
 func testMigration(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Client, c *cache.Cache, dir, name string) (bool, error) { //nolint:cyclop
-	cfgPath := filepath.Join(dir, ".yamledit", name+".yaml")
+	cfgPath := filepath.Join(dir, ".yamledit", name, "ruleset.yaml")
 	cfg, err := config.ReadRuleset(cfgPath)
 	if err != nil {
 		return false, fmt.Errorf("read config: %w", err)
@@ -70,26 +66,20 @@ func testMigration(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Cl
 		return false, fmt.Errorf("build actions: %w", err)
 	}
 
-	testDir := filepath.Join(dir, ".yamledit", name+"_test")
-	entries, err := os.ReadDir(testDir)
+	rulesetDir := filepath.Join(dir, ".yamledit", name)
+	entries, err := os.ReadDir(rulesetDir)
 	if err != nil {
-		if os.IsNotExist(err) {
-			logger.Warn("no test directory, skipping", "migration", name)
-			return false, nil
-		}
-		return false, fmt.Errorf("read test directory: %w", err)
+		return false, fmt.Errorf("read ruleset directory: %w", err)
 	}
 
 	var failed bool
+	var hasTests bool
 	for _, entry := range entries {
-		if entry.IsDir() {
+		if !entry.IsDir() {
 			continue
 		}
-		fname := entry.Name()
-		if !strings.HasSuffix(fname, ".yaml") || strings.HasSuffix(fname, "_result.yaml") {
-			continue
-		}
-		f, err := runTestCase(logger, testDir, fname, name, actions)
+		hasTests = true
+		f, err := runTestCase(logger, rulesetDir, entry.Name(), name, actions)
 		if err != nil {
 			return false, err
 		}
@@ -97,15 +87,17 @@ func testMigration(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Cl
 			failed = true
 		}
 	}
-	if !failed {
+	if !hasTests {
+		logger.Warn("no test directories, skipping", "migration", name)
+	} else if !failed {
 		logger.Info("all tests passed", "migration", name)
 	}
 	return failed, nil
 }
 
-func runTestCase(logger *slogutil.Logger, testDir, fname, migrationName string, actions []yamledit.Action) (bool, error) {
-	testName := strings.TrimSuffix(fname, ".yaml")
-	resultPath := filepath.Join(testDir, testName+"_result.yaml")
+func runTestCase(logger *slogutil.Logger, rulesetDir, testName, migrationName string, actions []yamledit.Action) (bool, error) {
+	testCaseDir := filepath.Join(rulesetDir, testName)
+	resultPath := filepath.Join(testCaseDir, "result.yaml")
 	if _, err := os.Stat(resultPath); err != nil {
 		if os.IsNotExist(err) {
 			logger.Warn("no result file, skipping", "migration", migrationName, "test", testName)
@@ -114,7 +106,7 @@ func runTestCase(logger *slogutil.Logger, testDir, fname, migrationName string, 
 		return false, fmt.Errorf("stat result file: %w", err)
 	}
 
-	inputPath := filepath.Join(testDir, fname)
+	inputPath := filepath.Join(testCaseDir, "test.yaml")
 	input, err := os.ReadFile(inputPath)
 	if err != nil {
 		return false, fmt.Errorf("read test input %s: %w", inputPath, err)

@@ -9,15 +9,15 @@ import (
 
 func setupTestFiles(t *testing.T, dir, migration, testName, input, result string) { //nolint:unparam
 	t.Helper()
-	testDir := filepath.Join(dir, ".yamledit", migration+"_test")
-	if err := os.MkdirAll(testDir, 0o755); err != nil {
+	testCaseDir := filepath.Join(dir, ".yamledit", migration, testName)
+	if err := os.MkdirAll(testCaseDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(testDir, testName+".yaml"), []byte(input), 0o644); err != nil { //nolint:gosec
+	if err := os.WriteFile(filepath.Join(testCaseDir, "test.yaml"), []byte(input), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 	if result != "" {
-		if err := os.WriteFile(filepath.Join(testDir, testName+"_result.yaml"), []byte(result), 0o644); err != nil { //nolint:gosec
+		if err := os.WriteFile(filepath.Join(testCaseDir, "result.yaml"), []byte(result), 0o644); err != nil { //nolint:gosec
 			t.Fatal(err)
 		}
 	}
@@ -94,14 +94,15 @@ func TestTest_noTestDirectory(t *testing.T) {
 	}
 }
 
-func TestDiscoverMigrations_skipsConfigYAML(t *testing.T) {
+func TestDiscoverMigrations_ignoresFiles(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	configDir := filepath.Join(dir, ".yamledit")
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
+	yamleditDir := filepath.Join(dir, ".yamledit")
+	if err := os.MkdirAll(yamleditDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("reusable_rules: []\n"), 0o644); err != nil { //nolint:gosec
+	// yamledit.yaml is a file, not a ruleset directory — should be ignored
+	if err := os.WriteFile(filepath.Join(yamleditDir, "yamledit.yaml"), []byte("reusable_rules: []\n"), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 	setupMigration(t, dir, "foo", `rules:
@@ -116,7 +117,7 @@ func TestDiscoverMigrations_skipsConfigYAML(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(names) != 1 {
-		t.Fatalf("expected 1 migration (config.yaml should be skipped), got %d: %v", len(names), names)
+		t.Fatalf("expected 1 migration, got %d: %v", len(names), names)
 	}
 	if names[0] != "foo" {
 		t.Errorf("expected migration name 'foo', got %q", names[0])
