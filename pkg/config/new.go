@@ -9,8 +9,14 @@ import (
 	"regexp"
 )
 
-//go:embed new.yaml
-var defaultConfig []byte
+var (
+	//go:embed new.yaml
+	defaultConfig []byte
+	//go:embed test.yaml
+	defaultTest []byte
+	//go:embed result.yaml
+	defaultResult []byte
+)
 
 const (
 	filePermission = 0o644
@@ -32,8 +38,8 @@ func New(stderr io.Writer, dir, name string) error {
 		content []byte
 	}{
 		{filepath.Join(rulesetDir, "ruleset.yaml"), defaultConfig},
-		{filepath.Join(testDir, "test.yaml"), []byte("age: 10\n")},
-		{filepath.Join(testDir, "result.yaml"), []byte("age: 10\n")},
+		{filepath.Join(testDir, "test.yaml"), defaultTest},
+		{filepath.Join(testDir, "result.yaml"), defaultResult},
 	}
 	for _, f := range files {
 		created, err := writeFileIfNotExist(f.path, f.content)
