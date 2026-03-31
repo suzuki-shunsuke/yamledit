@@ -74,14 +74,20 @@ func TestNew(t *testing.T) { //nolint:funlen
 				t.Errorf("file content mismatch:\ngot:\n%s\nwant:\n%s", string(b), string(defaultConfig))
 			}
 			// Verify test files
-			for _, testFile := range []string{"test.yaml", "result.yaml"} {
-				tp := filepath.Join(dir, ".yamledit", tt.input, "normal", testFile)
+			for _, tf := range []struct {
+				name string
+				want []byte
+			}{
+				{"test.yaml", defaultTest},
+				{"result.yaml", defaultResult},
+			} {
+				tp := filepath.Join(dir, ".yamledit", tt.input, "normal", tf.name)
 				tb, err := os.ReadFile(tp)
 				if err != nil {
-					t.Fatalf("failed to read test file %s: %v", testFile, err)
+					t.Fatalf("failed to read test file %s: %v", tf.name, err)
 				}
-				if string(tb) != "age: 10\n" {
-					t.Errorf("test file %s content mismatch:\ngot:\n%s\nwant:\n%s", testFile, string(tb), "age: 10\n")
+				if string(tb) != string(tf.want) {
+					t.Errorf("test file %s content mismatch:\ngot:\n%s\nwant:\n%s", tf.name, string(tb), string(tf.want))
 				}
 			}
 		})
@@ -145,14 +151,20 @@ func TestNew_migrationExistsButTestFilesMissing(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	for _, testFile := range []string{"test.yaml", "result.yaml"} {
-		tp := filepath.Join(rulesetDir, "normal", testFile)
+	for _, tf := range []struct {
+		name string
+		want []byte
+	}{
+		{"test.yaml", defaultTest},
+		{"result.yaml", defaultResult},
+	} {
+		tp := filepath.Join(rulesetDir, "normal", tf.name)
 		b, err := os.ReadFile(tp)
 		if err != nil {
-			t.Fatalf("failed to read test file %s: %v", testFile, err)
+			t.Fatalf("failed to read test file %s: %v", tf.name, err)
 		}
-		if string(b) != "age: 10\n" {
-			t.Errorf("test file %s content mismatch:\ngot:\n%s\nwant:\n%s", testFile, string(b), "age: 10\n")
+		if string(b) != string(tf.want) {
+			t.Errorf("test file %s content mismatch:\ngot:\n%s\nwant:\n%s", tf.name, string(b), string(tf.want))
 		}
 	}
 }
