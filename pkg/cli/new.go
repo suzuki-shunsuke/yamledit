@@ -29,7 +29,7 @@ func NewInit(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
 		Description: `Create a migration file using a default template if it doesn't exist.
 If the migration file already exists, this command does nothing.
 The migration name must match the regular expression '^[a-z0-9_-]+$'.
-The migration file is created at '.yamledit/<migration name>.yaml'.`,
+The migration file is created at '.yamledit/<migration name>/ruleset.yaml'.`,
 		Action: func(ctx context.Context, _ *cli.Command) error {
 			return runAction(ctx, logger, args)
 		},

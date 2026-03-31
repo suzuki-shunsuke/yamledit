@@ -18,11 +18,11 @@ func newLogger() *slogutil.Logger {
 
 func setupMigration(t *testing.T, dir, name, content string) {
 	t.Helper()
-	configDir := filepath.Join(dir, ".yamledit")
-	if err := os.MkdirAll(configDir, 0o755); err != nil {
+	rulesetDir := filepath.Join(dir, ".yamledit", name)
+	if err := os.MkdirAll(rulesetDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(configDir, name+".yaml"), []byte(content), 0o644); err != nil { //nolint:gosec
+	if err := os.WriteFile(filepath.Join(rulesetDir, "ruleset.yaml"), []byte(content), 0o644); err != nil { //nolint:gosec
 		t.Fatal(err)
 	}
 }

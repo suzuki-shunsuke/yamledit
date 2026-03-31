@@ -5,7 +5,7 @@ yamledit run [@<migration> ...] [<yaml file>...]
 ```
 
 Edits YAML files.
-Reads migration files from `.yamledit/*.yaml` and applies migrations according to the configuration.
+Reads ruleset files from `.yamledit/*/ruleset.yaml` and reusable rulesets in local config file and applies migrations according to the configuration.
 About migration files, please see [migration_file.md](migration_file.md)
 
 Arguments starting with `@` are treated as migrations, otherwise as YAML files to edit.
@@ -19,9 +19,17 @@ When migrations are specified, only the specified migrations are applied.
 1. `@./github.com/...` => Local path `github.com/...`
 1. `@foo.yaml` => foo.yaml
 1. `@foo/bar.yaml` => foo/bar.yaml
-1. `@foo` => .yamledit/foo.yaml
+1. `@foo` => `.yamledit/foo/ruleset.yaml` or alias in `.yamledit/yamledit.yaml`
 1. Other `@foo/bar` => Not support. raise error
 
 If no `<yaml file>` arguments are given, all files matching `**/*.yml` and `**/*.yaml` are targeted.
 
 When `<migration>` is a remote migration file such as a URL or GitHub Contents, it is [cached](cache.md).
+
+When `<migration>` is specified, sources are resolved in the following order:
+
+1. `.yamledit/*/ruleset.yaml`
+1. project config `.yamledit/yamledit.yaml`
+1. global config `${YAMLEDIT_GLOBAL_CONFIG}`
+
+When `<migration>` is not specified, the global config is not referenced.

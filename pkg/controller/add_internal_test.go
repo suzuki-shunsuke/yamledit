@@ -108,7 +108,7 @@ func TestAdd(t *testing.T) { //nolint:funlen,gocognit,cyclop
 			dir := t.TempDir()
 			migration := strings.ReplaceAll(tt.migration, "$URL", srv.URL)
 
-			configPath := filepath.Join(dir, ".yamledit", "config.yaml")
+			configPath := filepath.Join(dir, ".yamledit", "yamledit.yaml")
 			if tt.global {
 				configPath = filepath.Join(dir, "global", "config.yaml")
 				t.Setenv("YAMLEDIT_GLOBAL_CONFIG", configPath)
@@ -120,7 +120,7 @@ func TestAdd(t *testing.T) { //nolint:funlen,gocognit,cyclop
 					t.Fatal(err)
 				}
 				if tt.initialConfig != "" {
-					if err := os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(tt.initialConfig), 0o644); err != nil { //nolint:gosec
+					if err := os.WriteFile(filepath.Join(configDir, "yamledit.yaml"), []byte(tt.initialConfig), 0o644); err != nil { //nolint:gosec
 						t.Fatal(err)
 					}
 				}

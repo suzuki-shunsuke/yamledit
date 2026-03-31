@@ -55,7 +55,7 @@ func Add(ctx context.Context, stderr io.Writer, logger *slogutil.Logger, ghClien
 
 func resolveAddConfigPath(dir string, global bool) (string, error) {
 	if !global {
-		return filepath.Join(dir, ".yamledit", "config.yaml"), nil
+		return filepath.Join(dir, ".yamledit", "yamledit.yaml"), nil
 	}
 	p := config.GlobalConfigPath()
 	if p == "" {

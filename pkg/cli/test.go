@@ -16,17 +16,17 @@ func NewTest(logger *slogutil.Logger, gFlags *Flags) *cli.Command {
 	return &cli.Command{
 		Name:  "test",
 		Usage: "Test migration rules against expected results",
-		Description: `Tests whether YAML files are modified as expected by migration files.
+		Description: `Tests whether YAML files are modified as expected by ruleset files.
 This command fails if any test files are not modified expectedly.
 
-Tests for .yamledit/<migration>.yaml are located at .yamledit/<migration>_test/.
-The migration is applied to .yamledit/<migration>_test/<test>.yaml, and the result is verified against .yamledit/<migration>_test/<test>_result.yaml.
+Rulesets are located at .yamledit/<ruleset>/ruleset.yaml.
+Each test case is a subdirectory of .yamledit/<ruleset>/ containing test.yaml and result.yaml.
+The ruleset is applied to test.yaml, and the result is verified against result.yaml.
 This command doesn't change any files.
-During testing, .rules[].files in migration files is ignored.
-Files ending with _result.yaml are excluded from test targets.
-If a <test>.yaml exists without a corresponding <test>_result.yaml, a warning is output and <test>.yaml is skipped.
-If no arguments are specified, all migration files under .yamledit are tested. If no test files exist, a warning is output and the migration is skipped.
-If test files aren't modified expectedly, diff are outputted.`,
+During testing, .rules[].files in ruleset files is ignored.
+If a test directory has test.yaml without result.yaml, a warning is output and the test is skipped.
+If no arguments are specified, all rulesets under .yamledit are tested. If no test directories exist, a warning is output and the ruleset is skipped.
+If test files aren't modified expectedly, diffs are outputted.`,
 		Action: func(ctx context.Context, _ *cli.Command) error {
 			if err := logger.SetLevel(gFlags.LogLevel); err != nil {
 				return fmt.Errorf("set log level: %w", err)
