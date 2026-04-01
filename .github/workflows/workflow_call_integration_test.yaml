@@ -24,8 +24,11 @@ jobs:
       - run: test -f .yamledit/foo/ruleset.yaml
       - run: test -f .yamledit/foo/normal/test.yaml
       - run: test -f .yamledit/foo/normal/result.yaml
+      - run: yamledit new test
       - run: yamledit new foo
+      - run: yamledit new test
       - run: yamledit new zoo
       - run: test -f .yamledit/zoo/ruleset.yaml
       - run: test -f .yamledit/zoo/normal/test.yaml
       - run: test -f .yamledit/zoo/normal/result.yaml
+      - run: yamledit new test
