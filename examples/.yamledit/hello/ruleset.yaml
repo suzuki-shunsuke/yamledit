@@ -1,28 +1,67 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/yamledit/main/json-schema/ruleset.json
 rules:
   - path: "$"
+    # path is used to filter nodes by YAML AST.
+    # https://github.com/goccy/go-yaml/blob/v1.19.2/path.go#L17-L22
+    # YAMLPath rule
+    # $     : the root object/element
+    # .     : child operator
+    # ..    : recursive descent
+    # [num] : object/element of array by number
+    # [*]   : all objects/elements for array.
     actions:
-      - type: remove_keys
+      - type: remove_keys # remove keys from map
         keys:
           - name
-      - type: rename_key
+      - type: rename_key # rename key in map
         key: old_key
         new_key: new_key
-      - type: set_key
+        when_duplicate: skip
+      - type: set_key # set key in map
         key: added_key
         value: added value
-      - type: sort_key
+        skip_if_key_found: true
+        insert_at:
+          - after_key: foo
+          - before_key: bar
+          - first: true
+      - type: set_key # set key in map
+        key: added_key
+        value: added value
+        skip_if_key_not_found: true
+        clear_comment: true
+
+      - type: sort_key # sort keys in map
+        # https://expr-lang.org/docs/language-definition
+        # values: a, b: key-value pairs
+        # a and b have the following fields:
+        #   key: map key
+        #   value: map value of the key
+        #   comment: the comment of the value
+        # The expression compares a and b, and must return 1, 0, or -1.
         expr: |
           a.key > b.key ? 1 : -1
   - path: "$.children"
     actions:
-      - type: add_values
-        values:
+      - type: add_values # Add values to list
+        values: # added values
           - foo
-        index: -1
-      - type: remove_values
+        index: -1 # The index to insert the values at
+      - type: remove_values # Remove values from list
+        # https://expr-lang.org/docs/language-definition
+        # values: value: The list element
+        # value has the following fields:
+        #   value: value
+        #   comment: the comment of the value
+        # The expression must return boolean (true or false).
         expr: |
           value.value == "bar"
-      - type: sort_list
+      - type: sort_list # Sort list
+        # https://expr-lang.org/docs/language-definition
+        # values: a, b: The list elements
+        # a and b have the following fields:
+        #   value: value
+        #   comment: the comment of the value
+        # The expression compares a and b, and must return 1, 0, or -1.
         expr: |
           a.value == b.value ? 0 : (a.value > b.value ? 1 : -1)
