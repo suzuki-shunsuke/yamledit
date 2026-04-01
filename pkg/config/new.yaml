@@ -1,7 +1,0 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/suzuki-shunsuke/yamledit/main/json-schema/ruleset.json
-rules:
-  - path: "$"
-    actions:
-      - type: remove_keys
-        keys:
-          - name

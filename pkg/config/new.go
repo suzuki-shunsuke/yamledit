@@ -10,11 +10,11 @@ import (
 )
 
 var (
-	//go:embed new.yaml
+	//go:embed new_ruleset_template.yaml
 	defaultConfig []byte
-	//go:embed test.yaml
+	//go:embed new_test_template.yaml
 	defaultTest []byte
-	//go:embed result.yaml
+	//go:embed new_result_template.yaml
 	defaultResult []byte
 )
 
