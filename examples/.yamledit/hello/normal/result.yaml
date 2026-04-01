@@ -1,0 +1,5 @@
+added_key: added value
+children:
+  - foo
+  - zoo
+new_key: value # renamed to new_key
