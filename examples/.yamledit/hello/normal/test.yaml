@@ -1,0 +1,5 @@
+name: foo # removed
+old_key: value # renamed to new_key
+children:
+  - zoo
+  - bar
