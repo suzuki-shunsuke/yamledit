@@ -15,6 +15,13 @@ import (
 	gh "github.com/suzuki-shunsuke/yamledit/pkg/github"
 )
 
+const (
+	commentKey  = "comment"
+	valueKey    = "value"
+	yamlPattern = "**/*.yaml"
+	ymlPattern  = "**/*.yml"
+)
+
 type ruleActions struct {
 	files   []string
 	actions []yamledit.Action
@@ -69,7 +76,7 @@ func loadConfigs(ctx context.Context, logger *slogutil.Logger, ghClient *gh.Clie
 
 func discoverYAMLFiles(dir string) ([]string, error) {
 	var files []string
-	for _, pattern := range []string{"**/*.yaml", "**/*.yml"} {
+	for _, pattern := range []string{yamlPattern, ymlPattern} {
 		matches, err := doublestar.Glob(os.DirFS(dir), pattern)
 		if err != nil {
 			return nil, fmt.Errorf("glob %s: %w", pattern, err)
@@ -184,8 +191,8 @@ func buildSortKeyAction(logger *slogutil.Logger, path string, a *config.Action) 
 	}
 	return yamledit.MapAction(path, yamledit.SortKey(func(a, b *yamledit.KeyValue[any]) int {
 		env := map[string]any{
-			"a": map[string]any{"key": a.Key, "value": a.Value, "comment": a.Comment, "index": a.Index},
-			"b": map[string]any{"key": b.Key, "value": b.Value, "comment": b.Comment, "index": b.Index},
+			"a": map[string]any{"key": a.Key, valueKey: a.Value, commentKey: a.Comment, "index": a.Index},
+			"b": map[string]any{"key": b.Key, valueKey: b.Value, commentKey: b.Comment, "index": b.Index},
 		}
 		result, err := expr.Run(program, env)
 		if err != nil {
@@ -203,14 +210,14 @@ func buildSortKeyAction(logger *slogutil.Logger, path string, a *config.Action) 
 
 func buildRemoveValuesAction(logger *slogutil.Logger, path string, a *config.Action) (yamledit.Action, error) {
 	program, err := expr.Compile(a.Expr, expr.Env(map[string]any{
-		"value": map[string]any{},
+		valueKey: map[string]any{},
 	}))
 	if err != nil {
 		return nil, fmt.Errorf("compile remove_values expr: %w", err)
 	}
 	return yamledit.ListAction(path, yamledit.RemoveValuesFromList(func(node *yamledit.Node[any]) (bool, error) {
 		env := map[string]any{
-			"value": map[string]any{"value": node.Value, "comment": node.Comment},
+			valueKey: map[string]any{valueKey: node.Value, commentKey: node.Comment},
 		}
 		result, err := expr.Run(program, env)
 		if err != nil {
@@ -236,8 +243,8 @@ func buildSortListAction(logger *slogutil.Logger, path string, a *config.Action)
 	}
 	return yamledit.ListAction(path, yamledit.SortList(func(a, b *yamledit.Node[any]) int {
 		env := map[string]any{
-			"a": map[string]any{"value": a.Value, "comment": a.Comment},
-			"b": map[string]any{"value": b.Value, "comment": b.Comment},
+			"a": map[string]any{valueKey: a.Value, commentKey: a.Comment},
+			"b": map[string]any{valueKey: b.Value, commentKey: b.Comment},
 		}
 		result, err := expr.Run(program, env)
 		if err != nil {
