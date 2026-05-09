@@ -38,6 +38,7 @@ func Run(ctx context.Context, logger *slogutil.Logger, env *urfave.Env) error {
 			NewRun(logger, gFlags),
 			NewTest(logger, gFlags),
 			NewAdd(logger, gFlags),
+			NewSearch(logger, gFlags),
 		},
 	}).Run(ctx, env.Args)
 }

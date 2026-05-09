@@ -14,21 +14,28 @@ import (
 )
 
 type Client struct {
-	repo RepositoriesService
+	repo   RepositoriesService
+	search SearchService
 }
 
 type RepositoriesService interface {
 	GetContents(ctx context.Context, owner, repo, path string, opts *github.RepositoryContentGetOptions) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error)
 }
 
+type SearchService interface {
+	Repositories(ctx context.Context, query string, opts *github.SearchOptions) (*github.RepositoriesSearchResult, *github.Response, error)
+}
+
 type (
 	RepositoryContentGetOptions = github.RepositoryContentGetOptions
+	Repository                  = github.Repository
 )
 
 func New(ctx context.Context, logger *slog.Logger, token string, ghtknEnabled bool) *Client {
 	gh := github.NewClient(getHTTPClient(ctx, logger, token, ghtknEnabled))
 	return &Client{
-		repo: gh.Repositories,
+		repo:   gh.Repositories,
+		search: gh.Search,
 	}
 }
 
