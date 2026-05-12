@@ -13,7 +13,7 @@ require (
 	github.com/suzuki-shunsuke/go-yamledit v0.0.5
 	github.com/suzuki-shunsuke/slog-util v0.3.2
 	github.com/suzuki-shunsuke/urfave-cli-v3-util v0.2.3
-	github.com/urfave/cli/v3 v3.8.0
+	github.com/urfave/cli/v3 v3.9.0
 	golang.org/x/oauth2 v0.36.0
 )
 
