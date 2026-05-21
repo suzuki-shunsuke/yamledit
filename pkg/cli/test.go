@@ -35,7 +35,10 @@ If test files aren't modified expectedly, diffs are outputted.`,
 			if err != nil {
 				return fmt.Errorf("get ghtkn enabled: %w", err)
 			}
-			ghClient := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv(), ghtknEnabled)
+			ghClient, err := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv(), ghtknEnabled)
+			if err != nil {
+				return fmt.Errorf("create a GitHub client: %w", err)
+			}
 			c := cache.New(gFlags.NoCache)
 			return controller.Test(ctx, logger, ghClient, c, ".", migrations)
 		},
