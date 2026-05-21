@@ -72,7 +72,10 @@ func addAction(ctx context.Context, logger *slogutil.Logger, args *AddArgs) erro
 	if err != nil {
 		return fmt.Errorf("get ghtkn enabled: %w", err)
 	}
-	ghClient := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv(), ghtknEnabled)
+	ghClient, err := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv(), ghtknEnabled)
+	if err != nil {
+		return fmt.Errorf("create a GitHub client: %w", err)
+	}
 	c := cache.New(args.NoCache)
 	return controller.Add(ctx, os.Stderr, logger, ghClient, c, ".", args.Alias, args.Migration, args.Force, args.Global) //nolint:wrapcheck
 }
