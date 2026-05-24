@@ -7,7 +7,7 @@ require (
 	github.com/expr-lang/expr v1.17.8
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-github/v87 v87.0.0
+	github.com/google/go-github/v88 v88.0.0
 	github.com/suzuki-shunsuke/gen-go-jsonschema v0.1.0
 	github.com/suzuki-shunsuke/ghtkn-go-sdk v0.2.2
 	github.com/suzuki-shunsuke/go-yamledit v0.0.5
