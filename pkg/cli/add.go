@@ -68,11 +68,7 @@ func addAction(ctx context.Context, logger *slogutil.Logger, args *AddArgs) erro
 	if args.Migration == "" {
 		return errors.New("migration is required")
 	}
-	ghtknEnabled, err := gh.GetGHTKNEnabledFromEnv()
-	if err != nil {
-		return fmt.Errorf("get ghtkn enabled: %w", err)
-	}
-	ghClient, err := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv(), ghtknEnabled)
+	ghClient, err := gh.New(ctx, logger.Logger, gh.GetGitHubTokenFromEnv())
 	if err != nil {
 		return fmt.Errorf("create a GitHub client: %w", err)
 	}
