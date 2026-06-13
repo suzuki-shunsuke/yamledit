@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/google/go-github/v88/github"
 	"github.com/suzuki-shunsuke/ghtkn-go-sdk/ghtkn"
+	"github.com/suzuki-shunsuke/slog-error/slogerr"
 	"golang.org/x/oauth2"
 )
 
@@ -25,8 +25,8 @@ type (
 	RepositoryContentGetOptions = github.RepositoryContentGetOptions
 )
 
-func New(ctx context.Context, logger *slog.Logger, token string, ghtknEnabled bool) (*Client, error) {
-	gh, err := github.NewClient(github.WithHTTPClient(getHTTPClient(ctx, logger, token, ghtknEnabled)))
+func New(ctx context.Context, logger *slog.Logger, token string) (*Client, error) {
+	gh, err := github.NewClient(github.WithHTTPClient(getHTTPClient(ctx, logger, token)))
 	if err != nil {
 		return nil, fmt.Errorf("create a GitHub client: %w", err)
 	}
@@ -35,24 +35,38 @@ func New(ctx context.Context, logger *slog.Logger, token string, ghtknEnabled bo
 	}, nil
 }
 
-func getHTTPClient(ctx context.Context, logger *slog.Logger, token string, ghtknEnabled bool) *http.Client {
-	ts := getTokenSource(logger, token, ghtknEnabled)
+func getHTTPClient(ctx context.Context, logger *slog.Logger, token string) *http.Client {
+	ts, err := getTokenSource(logger, token)
+	if err != nil {
+		slogerr.WithError(logger, err).Warn("get a token source")
+		return http.DefaultClient
+	}
 	if ts == nil {
 		return http.DefaultClient
 	}
 	return oauth2.NewClient(ctx, ts)
 }
 
-func getTokenSource(logger *slog.Logger, token string, ghtknEnabled bool) oauth2.TokenSource {
+func getTokenSource(logger *slog.Logger, token string) (oauth2.TokenSource, error) {
 	if token != "" {
 		return oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
-		)
+		), nil
 	}
-	if ghtknEnabled {
-		return ghtkn.New().TokenSource(logger, &ghtkn.InputGet{})
+	ghtknEnabled, err := ghtkn.Enabled(&ghtkn.InputEnabled{
+		Envs: []string{"YAMLEDIT_GHTKN_ENABLED"},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get ghtkn enabled: %w", err)
 	}
-	return nil
+	if !ghtknEnabled {
+		return nil, nil //nolint:nilnil
+	}
+	client, err := ghtkn.New()
+	if err != nil {
+		return nil, fmt.Errorf("create a ghtkn client: %w", err)
+	}
+	return client.TokenSource(logger, &ghtkn.InputGet{}), nil
 }
 
 func GetGitHubTokenFromEnv() string {
@@ -63,16 +77,4 @@ func GetGitHubTokenFromEnv() string {
 		}
 	}
 	return ""
-}
-
-func GetGHTKNEnabledFromEnv() (bool, error) {
-	s := os.Getenv("YAMLEDIT_GHTKN_ENABLED")
-	if s == "" {
-		return false, nil
-	}
-	b, err := strconv.ParseBool(s)
-	if err != nil {
-		return false, fmt.Errorf("parse the environment variable as a boolean: %w", err)
-	}
-	return b, nil
 }
