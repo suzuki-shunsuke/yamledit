@@ -9,7 +9,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v88 v88.0.0
 	github.com/suzuki-shunsuke/gen-go-jsonschema v0.1.0
-	github.com/suzuki-shunsuke/ghtkn-go-sdk v0.3.0
+	github.com/suzuki-shunsuke/ghtkn-go-sdk v0.3.1
 	github.com/suzuki-shunsuke/go-yamledit v0.0.5
 	github.com/suzuki-shunsuke/slog-error v0.2.2
 	github.com/suzuki-shunsuke/slog-util v0.3.2
@@ -35,7 +35,7 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/zalando/go-keyring v0.2.8 // indirect
 	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/term v0.43.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
