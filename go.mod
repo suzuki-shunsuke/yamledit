@@ -1,6 +1,6 @@
 module github.com/suzuki-shunsuke/yamledit
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.0
