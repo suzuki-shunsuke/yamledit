@@ -4,7 +4,7 @@ go 1.27.4
 
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.4
-	github.com/expr-lang/expr v1.18.0
+	github.com/expr-lang/expr v1.18.1
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v93 v93.0.0
